@@ -55,6 +55,7 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
     setTimeout(() => {
       setTestResults({
         success: true,
+        message: "Source test successful",
         itemsFound: 5,
         lastItem: "Latest article: AI breakthrough in protein folding",
         sampleItems: [
