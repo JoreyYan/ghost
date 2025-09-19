@@ -116,7 +116,7 @@ const mockDigestDetail = {
   }
 }
 
-export function DigestDetailDialog({ digestId: _digestId, onClose }: DigestDetailDialogProps) {
+export function DigestDetailDialog({ onClose }: DigestDetailDialogProps) {
   const [activeTab, setActiveTab] = useState("summary")
 
   const getImpactBadge = (impact: string) => {

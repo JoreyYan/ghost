@@ -92,7 +92,7 @@ const mockPolicyDetail = {
   ]
 }
 
-export function PolicyDetailDialog({ policyId: _policyId, onClose }: PolicyDetailDialogProps) {
+export function PolicyDetailDialog({ onClose }: PolicyDetailDialogProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
   const getStatusBadge = (status: string) => {

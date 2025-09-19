@@ -104,7 +104,7 @@ const mockRecentItems = [
   }
 ]
 
-export function SourceDetailDrawer({ sourceId: _sourceId, onClose }: SourceDetailDrawerProps) {
+export function SourceDetailDrawer({ onClose }: SourceDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
   const getStatusIcon = (status: string) => {

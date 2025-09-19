@@ -386,7 +386,7 @@ export default function EntitiesPage() {
 }
 
 // Placeholder for EntityDetailDialog component
-function EntityDetailDialog({ entityId: _entityId, onClose }: { entityId: string, onClose: () => void }) {
+function EntityDetailDialog({ onClose }: { entityId: string, onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
