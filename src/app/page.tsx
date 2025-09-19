@@ -27,8 +27,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Today's Highlights</h1>
-        <p className="text-muted-foreground">Overview of today's news intelligence</p>
+        <h1 className="text-3xl font-bold">Today&apos;s Highlights</h1>
+        <p className="text-muted-foreground">Overview of today&apos;s news intelligence</p>
       </div>
 
       {/* Stats Cards */}

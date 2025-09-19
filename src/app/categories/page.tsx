@@ -90,7 +90,7 @@ export default function CategoriesPage() {
     category.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const CategoryNode = ({ category, level = 0 }: { category: {id: string, name: string, children?: Array<{id: string, name: string}>}, level?: number }) => {
+  const CategoryNode = ({ category, level = 0 }: { category: {id: string, name: string, description: string, sourceCount: number, children?: Array<{id: string, name: string, description: string, sourceCount: number}>}, level?: number }) => {
     const isExpanded = expandedCategories.includes(category.id)
     const hasChildren = category.children && category.children.length > 0
 
@@ -130,7 +130,7 @@ export default function CategoriesPage() {
           {hasChildren && (
             <CollapsibleContent>
               <div className="ml-7 space-y-1">
-                {category.children.map((child: {id: string, name: string}) => (
+                {category.children.map((child: {id: string, name: string, description: string, sourceCount: number}) => (
                   <CategoryNode key={child.id} category={child} level={level + 1} />
                 ))}
               </div>

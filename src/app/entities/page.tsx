@@ -9,16 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   Search, 
-  Filter, 
   Users, 
   Building2, 
-  Calendar,
-  Clock,
   ExternalLink,
   Star,
-  TrendingUp,
   Activity,
-  FileText,
   Github,
   Twitter,
   Globe,
@@ -180,7 +175,7 @@ export default function EntitiesPage() {
     return type === "person" ? <Users className="h-4 w-4" /> : <Building2 className="h-4 w-4" />
   }
 
-  const getSocialIcon = (platform: string) => {
+  const getSocialIcon = (_platform: string) => {
     switch (platform) {
       case "github":
         return <Github className="h-4 w-4" />
@@ -403,7 +398,7 @@ export default function EntitiesPage() {
 }
 
 // Placeholder for EntityDetailDialog component
-function EntityDetailDialog({ entityId, onClose }: { entityId: string, onClose: () => void }) {
+function EntityDetailDialog({ entityId: _entityId, onClose }: { entityId: string, onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">

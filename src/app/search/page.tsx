@@ -8,21 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Search, 
   Filter, 
   Calendar, 
-  Clock, 
   ExternalLink, 
   Star,
   TrendingUp,
   Brain,
   FileText,
   Users,
-  Tag,
-  SortAsc,
-  SortDesc
+  Tag
 } from "lucide-react"
 
 // Mock search results
@@ -181,7 +177,7 @@ export default function SearchPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder={isSemanticSearch ? "Describe what you're looking for..." : "Search keywords..."}
+              placeholder={isSemanticSearch ? "Describe what you&apos;re looking for..." : "Search keywords..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-20 h-12 text-lg"
@@ -370,7 +366,7 @@ export default function SearchPage() {
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No results found</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Try adjusting your search terms or filters to find what you're looking for.
+              Try adjusting your search terms or filters to find what you&apos;re looking for.
             </p>
             <Button onClick={() => {
               setSearchTerm("")
@@ -393,16 +389,16 @@ export default function SearchPage() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm">
-                Related: "AI 金融"
+                Related: &quot;AI 金融&quot;
               </Button>
               <Button variant="outline" size="sm">
-                Related: "机器学习"
+                Related: &quot;机器学习&quot;
               </Button>
               <Button variant="outline" size="sm">
-                Related: "投资分析"
+                Related: &quot;投资分析&quot;
               </Button>
               <Button variant="outline" size="sm">
-                Related: "政策解读"
+                Related: &quot;政策解读&quot;
               </Button>
             </div>
           </CardContent>

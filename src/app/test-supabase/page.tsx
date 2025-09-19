@@ -23,7 +23,7 @@ export default function TestSupabasePage() {
 
     try {
       // Test 1: Basic connection
-      const { data: connectionTest, error: connectionError } = await supabase
+      const { data: _connectionTest, error: connectionError } = await supabase
         .from('categories')
         .select('count')
         .limit(1)
