@@ -1,103 +1,137 @@
-import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, AlertTriangle, Clock } from "lucide-react";
 
-export default function Home() {
+export default function Dashboard() {
+  // Mock data
+  const todayStats = [
+    { category: "金融类", newItems: 3, insights: 2, trend: "up" },
+    { category: "生物AI", newItems: 5, insights: 3, trend: "up" },
+    { category: "行业情报", newItems: 2, insights: 1, trend: "down" },
+  ];
+
+  const recentActivity = [
+    { time: "09:00", source: "bioRxiv", action: "新论文发布", item: "蛋白质结构预测新突破" },
+    { time: "10:30", source: "GitHub", action: "新 commit", item: "torvalds: Linux 内核更新" },
+    { time: "11:15", source: "金融", action: "融资新闻", item: "AI 金融科技公司获 5000 万美元融资" },
+    { time: "12:00", source: "行业", action: "政策发布", item: "央行数字货币试点扩大" },
+  ];
+
+  const anomalies = [
+    { type: "warning", message: "GitHub API 限流 (3/5 sources)", count: 3 },
+    { type: "success", message: "金融类今日增量 +200%", count: 200 },
+    { type: "info", message: "生物AI 新论文数量创新高", count: 5 },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Today's Highlights</h1>
+        <p className="text-muted-foreground">Overview of today's news intelligence</p>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {todayStats.map((stat) => (
+          <Card key={stat.category}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{stat.category}</CardTitle>
+              {stat.trend === "up" ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.newItems} 新文</div>
+              <p className="text-xs text-muted-foreground">
+                {stat.insights} 个洞见
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Activity Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {activity.time}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {activity.source}
+                      </Badge>
+                    </div>
+                    <p className="text-sm mt-1">
+                      <span className="font-medium">{activity.action}:</span> {activity.item}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Anomalies & Alerts */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Anomalies & Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {anomalies.map((anomaly, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex items-center space-x-2">
+                    {anomaly.type === "warning" && (
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {anomaly.type === "success" && (
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                    )}
+                    {anomaly.type === "info" && (
+                      <Clock className="h-4 w-4 text-blue-500" />
+                    )}
+                    <span className="text-sm">{anomaly.message}</span>
+                  </div>
+                  <Badge variant="secondary">{anomaly.count}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline">View All Sources</Button>
+            <Button variant="outline">Generate Daily Digest</Button>
+            <Button variant="outline">Search Recent News</Button>
+            <Button variant="outline">Manage Policies</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
