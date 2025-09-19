@@ -14,7 +14,6 @@ import {
   GitBranch, 
   Users, 
   Calendar,
-  Code,
   FileText,
   Database,
   Zap,
@@ -93,7 +92,7 @@ const mockPolicyDetail = {
   ]
 }
 
-export function PolicyDetailDialog({ policyId, onClose }: PolicyDetailDialogProps) {
+export function PolicyDetailDialog({ policyId: _policyId, onClose }: PolicyDetailDialogProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
   const getStatusBadge = (status: string) => {
@@ -446,3 +445,5 @@ export function PolicyDetailDialog({ policyId, onClose }: PolicyDetailDialogProp
     </DialogContent>
   )
 }
+
+

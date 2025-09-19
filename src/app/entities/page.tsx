@@ -423,3 +423,5 @@ function EntityDetailDialog({ entityId, onClose }: { entityId: string, onClose: 
     </div>
   )
 }
+
+

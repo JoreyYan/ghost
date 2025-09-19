@@ -161,3 +161,5 @@ INSERT INTO analysis_policies (name, policy) VALUES (
 -- Bind default policy globally
 INSERT INTO policy_bindings (policy_id, scope_type, scope_id) 
 SELECT id, 'global', NULL FROM analysis_policies WHERE name = 'default';
+
+

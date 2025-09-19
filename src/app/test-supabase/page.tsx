@@ -8,7 +8,12 @@ import { Badge } from '@/components/ui/badge'
 
 export default function TestSupabasePage() {
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [testResults, setTestResults] = useState<any>(null)
+  const [testResults, setTestResults] = useState<{
+    connection: string;
+    tables: string[];
+    extensions: string[];
+    timestamp: string;
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const testConnection = async () => {
@@ -153,3 +158,5 @@ export default function TestSupabasePage() {
     </div>
   )
 }
+
+

@@ -15,8 +15,6 @@ import {
   AlertCircle, 
   Clock,
   Activity,
-  Settings,
-  FileText
 } from "lucide-react"
 
 interface SourceDetailDrawerProps {
@@ -106,7 +104,7 @@ const mockRecentItems = [
   }
 ]
 
-export function SourceDetailDrawer({ sourceId, onClose }: SourceDetailDrawerProps) {
+export function SourceDetailDrawer({ sourceId: _sourceId, onClose }: SourceDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
   const getStatusIcon = (status: string) => {
@@ -337,3 +335,5 @@ export function SourceDetailDrawer({ sourceId, onClose }: SourceDetailDrawerProp
     </div>
   )
 }
+
+

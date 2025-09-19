@@ -268,3 +268,5 @@ export function AddCategoryDialog({ onClose }: AddCategoryDialogProps) {
     </DialogContent>
   )
 }
+
+

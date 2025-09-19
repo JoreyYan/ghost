@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Code, FileText, Database, Zap } from "lucide-react"
+import { FileText, Database, Zap } from "lucide-react"
 
 interface AddPolicyDialogProps {
   onClose: () => void
@@ -470,3 +470,5 @@ export function AddPolicyDialog({ onClose }: AddPolicyDialogProps) {
     </DialogContent>
   )
 }
+
+

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
 import { 
   X, 
   Share2, 
@@ -117,7 +116,7 @@ const mockDigestDetail = {
   }
 }
 
-export function DigestDetailDialog({ digestId, onClose }: DigestDetailDialogProps) {
+export function DigestDetailDialog({ digestId: _digestId, onClose }: DigestDetailDialogProps) {
   const [activeTab, setActiveTab] = useState("summary")
 
   const getImpactBadge = (impact: string) => {
@@ -368,3 +367,5 @@ export function DigestDetailDialog({ digestId, onClose }: DigestDetailDialogProp
     </div>
   )
 }
+
+
