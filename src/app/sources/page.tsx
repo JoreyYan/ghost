@@ -28,57 +28,38 @@ interface Source {
   health?: string
 }
 
-// Mock data (fallback)
-const mockSources = [
-  {
-    id: "1",
-    name: "bioRxiv Latest Papers",
-    type: "RSS",
-    url: "https://biorxiv.org/rss.xml",
-    categories: ["生物AI", "研究论文"],
-    status: "active",
-    lastRun: "2 hours ago",
-    newItems: 3,
-    health: "good",
-    nextRun: "6 hours"
-  },
-  {
-    id: "2", 
-    name: "Linus Torvalds",
-    type: "GitHub",
-    url: "https://github.com/torvalds",
-    categories: ["开源", "技术"],
-    status: "active",
-    lastRun: "1 hour ago",
-    newItems: 2,
-    health: "good",
-    nextRun: "3 hours"
-  },
-  {
-    id: "3",
-    name: "CoinDesk",
-    type: "RSS", 
-    url: "https://coindesk.com/rss",
-    categories: ["金融", "加密货币"],
-    status: "warning",
-    lastRun: "5 hours ago",
-    newItems: 0,
-    health: "warning",
-    nextRun: "1 hour"
-  },
-  {
-    id: "4",
-    name: "TechCrunch",
-    type: "RSS",
-    url: "https://techcrunch.com/feed",
-    categories: ["科技", "创业"],
-    status: "inactive",
-    lastRun: "2 days ago",
-    newItems: 0,
-    health: "error",
-    nextRun: "Never"
+// 获取源的抓取状态
+const getSourceStatus = async (sourceId: string) => {
+  try {
+    const { data: lastRun } = await supabase
+      .from('fetch_runs')
+      .select('*')
+      .eq('source_id', sourceId)
+      .eq('ok', true)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single()
+    
+    const { data: itemCount } = await supabase
+      .from('items')
+      .select('id', { count: 'exact' })
+      .eq('source_id', sourceId)
+    
+    return {
+      lastRun: lastRun ? new Date(lastRun.started_at).toLocaleString() : 'Never',
+      newItems: lastRun?.new_items || 0,
+      totalItems: itemCount?.length || 0,
+      health: lastRun ? 'good' : 'unknown'
+    }
+  } catch (error) {
+    return {
+      lastRun: 'Unknown',
+      newItems: 0,
+      totalItems: 0,
+      health: 'error'
+    }
   }
-]
+}
 
 export default function SourcesPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -88,73 +69,82 @@ export default function SourcesPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [sources, setSources] = useState<Source[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchingSource, setFetchingSource] = useState<string | null>(null)
 
-  // Fetch sources from database
-  useEffect(() => {
-    const fetchSources = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('sources')
-          .select(`
-            *,
-            source_categories (
-              categories (
-                name
-              )
-            )
-          `)
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          console.error('Error fetching sources:', error)
-          // Fallback to mock data
-          setSources(mockSources.map(mock => ({
-            id: mock.id,
-            name: mock.name,
-            kind: mock.type.toLowerCase(),
-            handle: mock.url,
-            active: mock.status === 'active',
-            fetch_cron: null,
-            created_at: new Date().toISOString(),
-            categories: mock.categories,
-            last_run: mock.lastRun,
-            new_items: mock.newItems,
-            health: mock.health
-          })))
-        } else {
-          // Transform database data to match our interface
-          const transformedSources = data?.map(source => ({
-            ...source,
-            categories: source.source_categories?.map((sc: {categories: {name: string}}) => sc.categories?.name).filter(Boolean) || [],
-            last_run: 'Never', // TODO: Get from fetch_runs table
-            new_items: 0, // TODO: Get from items count
-            health: source.active ? 'good' : 'error'
-          })) || []
-          setSources(transformedSources)
-        }
-      } catch (err) {
-        console.error('Error:', err)
-        // Fallback to mock data
-        setSources(mockSources.map(mock => ({
-          id: mock.id,
-          name: mock.name,
-          kind: mock.type.toLowerCase(),
-          handle: mock.url,
-          active: mock.status === 'active',
-          fetch_cron: null,
-          created_at: new Date().toISOString(),
-          categories: mock.categories,
-          last_run: mock.lastRun,
-          new_items: mock.newItems,
-          health: mock.health
-        })))
-      } finally {
-        setLoading(false)
+  // 手动抓取数据源
+  const handleFetchSource = async (sourceId: string) => {
+    setFetchingSource(sourceId)
+    try {
+      const response = await fetch('/api/fetch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sourceId })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`成功抓取 ${result.newItems} 条新数据！`)
+        // 刷新页面数据
+        window.location.reload()
+      } else {
+        alert(`抓取失败: ${result.error}`)
       }
+    } catch (error) {
+      console.error('Fetch error:', error)
+      alert('抓取过程中发生错误')
+    } finally {
+      setFetchingSource(null)
     }
+  }
 
-    fetchSources()
-  }, [])
+         // Fetch sources from database
+         useEffect(() => {
+           const fetchSources = async () => {
+             try {
+               const { data, error } = await supabase
+                 .from('sources')
+                 .select(`
+                   *,
+                   source_categories (
+                     categories (
+                       name
+                     )
+                   )
+                 `)
+                 .order('created_at', { ascending: false })
+
+               if (error) {
+                 console.error('Error fetching sources:', error)
+                 setSources([])
+               } else {
+                 // Transform database data and get status for each source
+                 const transformedSources = await Promise.all(
+                   (data || []).map(async (source) => {
+                     const status = await getSourceStatus(source.id)
+                     return {
+                       ...source,
+                       categories: source.source_categories?.map((sc: {categories: {name: string}}) => sc.categories?.name).filter(Boolean) || [],
+                       last_run: status.lastRun,
+                       new_items: status.newItems,
+                       health: status.health
+                     }
+                   })
+                 )
+                 setSources(transformedSources)
+               }
+             } catch (err) {
+               console.error('Error:', err)
+               setSources([])
+             } finally {
+               setLoading(false)
+             }
+           }
+
+           fetchSources()
+         }, [])
 
   const filteredSources = sources.filter(source => {
     const matchesSearch = source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -323,26 +313,31 @@ export default function SourcesPage() {
                         <span className="text-sm capitalize">{source.health || 'unknown'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => setSelectedSource(source.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                           <TableCell>
+                             <div className="flex items-center gap-2">
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm"
+                                 onClick={() => handleFetchSource(source.id)}
+                                 disabled={fetchingSource === source.id}
+                               >
+                                 <Play className={`h-4 w-4 ${fetchingSource === source.id ? 'animate-spin' : ''}`} />
+                               </Button>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => setSelectedSource(source.id)}
+                               >
+                                 <Eye className="h-4 w-4" />
+                               </Button>
+                               <Button variant="ghost" size="sm">
+                                 <Edit className="h-4 w-4" />
+                               </Button>
+                               <Button variant="ghost" size="sm">
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                             </div>
+                           </TableCell>
                   </TableRow>
                 ))}
                 {filteredSources.length === 0 && (
