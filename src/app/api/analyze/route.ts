@@ -8,27 +8,15 @@ export async function POST(request: NextRequest) {
     const openaiApiKey = process.env.OPENAI_API_KEY
     
     if (!openaiApiKey) {
-      // 如果没有 API Key，返回默认分析
-      return NextResponse.json({
-        summary: `基于 ${items.length} 条内容的分析摘要。`,
-        insights: [
-          '内容更新频繁，显示活跃的社区参与',
-          '涉及多个技术领域，体现了跨学科的特点',
-          '质量较高，包含详细的技术讨论'
-        ],
-        trends: [
-          '技术发展持续加速',
-          '开源项目活跃度提升',
-          '跨领域合作增多'
-        ],
-        impact: '这些内容对相关技术领域的发展具有积极影响。',
-        recommendations: [
-          '持续关注相关技术发展',
-          '参与社区讨论和贡献',
-          '将新技术应用到实际项目中'
-        ],
-        keyEntities: items.map((item: { author: string }) => item.author).filter(Boolean).slice(0, 5)
-      })
+      // 如果没有 API Key，返回错误信息
+      return NextResponse.json(
+        { 
+          error: 'OpenAI API Key not configured',
+          message: '请在 Vercel 环境变量中配置 OPENAI_API_KEY',
+          details: '获取 API Key: https://platform.openai.com/api-keys'
+        },
+        { status: 400 }
+      )
     }
     
     // 调用 OpenAI API

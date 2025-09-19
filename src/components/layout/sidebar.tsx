@@ -15,6 +15,7 @@ import {
   Users,
   BarChart3,
   TestTube,
+  Brain,
 } from "lucide-react"
 
 const navigation = [
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Search", href: "/search", icon: Search },
   { name: "Entities", href: "/entities", icon: Users },
   { name: "Test Supabase", href: "/test-supabase", icon: TestTube },
+  { name: "Test AI", href: "/test-ai", icon: Brain },
 ]
 
 export function Sidebar() {
