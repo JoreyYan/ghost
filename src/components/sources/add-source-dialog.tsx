@@ -10,6 +10,7 @@ import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Plus, TestTube } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
 interface AddSourceDialogProps {
   onClose: () => void
@@ -68,9 +69,63 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
     }, 2000)
   }
 
-  const handleSubmit = () => {
-    console.log("Creating source:", formData)
-    onClose()
+  const handleSubmit = async () => {
+    try {
+      // 准备数据
+      const sourceData = {
+        name: formData.name,
+        kind: formData.type.toLowerCase(),
+        handle: formData.url,
+        active: true,
+        fetch_cron: formData.frequency ? `${formData.time} * * *` : null
+      }
+
+      // 保存到 Supabase
+      const { data, error } = await supabase
+        .from('sources')
+        .insert([sourceData])
+        .select()
+
+      if (error) {
+        console.error('Error creating source:', error)
+        alert('Failed to create source: ' + error.message)
+        return
+      }
+
+      console.log('Source created successfully:', data)
+      
+      // 如果选择了分类，也保存分类关联
+      if (formData.categories.length > 0) {
+        const sourceId = data[0].id
+        
+        // 获取分类ID
+        const { data: categories, error: categoryError } = await supabase
+          .from('categories')
+          .select('id, name')
+          .in('name', formData.categories)
+
+        if (!categoryError && categories.length > 0) {
+          const sourceCategories = categories.map(cat => ({
+            source_id: sourceId,
+            category_id: cat.id
+          }))
+
+          await supabase
+            .from('source_categories')
+            .insert(sourceCategories)
+        }
+      }
+
+      alert('Source created successfully!')
+      onClose()
+      
+      // 刷新页面以显示新数据
+      window.location.reload()
+      
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      alert('An unexpected error occurred')
+    }
   }
 
   return (
