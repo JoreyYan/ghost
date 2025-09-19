@@ -130,7 +130,7 @@ export default function CategoriesPage() {
           {hasChildren && (
             <CollapsibleContent>
               <div className="ml-7 space-y-1">
-                {category.children.map((child: {id: string, name: string, description: string, sourceCount: number, defaultPolicy: string}) => (
+                {category.children?.map((child: {id: string, name: string, description: string, sourceCount: number, defaultPolicy: string}) => (
                   <CategoryNode key={child.id} category={child} level={level + 1} />
                 ))}
               </div>
