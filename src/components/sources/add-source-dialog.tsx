@@ -27,7 +27,7 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
   })
 
   const [newCategory, setNewCategory] = useState("")
-  const [testResults, setTestResults] = useState<{success: boolean, message: string, data?: unknown} | null>(null)
+  const [testResults, setTestResults] = useState<{success: boolean, message: string, data?: unknown, itemsFound?: number, lastItem?: string, sampleItems?: string[]} | null>(null)
   const [isTesting, setIsTesting] = useState(false)
 
   const availableCategories = ["金融", "生物AI", "科技", "开源", "研究论文", "加密货币", "创业", "技术", "行业情报"]
