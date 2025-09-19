@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Search, Filter, ChevronLeft, ChevronRight, Eye, Share2, Download } from "lucide-react"
+import { CalendarIcon, Search, Filter, Eye, Share2, Download } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { DigestDetailDialog } from "@/components/digests/digest-detail-dialog"
@@ -143,7 +143,7 @@ export default function DigestsPage() {
             Export All
           </Button>
           <Button>
-            Generate Today's Digest
+            Generate Today&apos;s Digest
           </Button>
         </div>
       </div>

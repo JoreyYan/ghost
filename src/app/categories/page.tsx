@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Plus, Search, ChevronRight, ChevronDown, Settings, FolderOpen, Folder } from "lucide-react"
 import { AddCategoryDialog } from "@/components/categories/add-category-dialog"
@@ -90,7 +90,7 @@ export default function CategoriesPage() {
     category.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const CategoryNode = ({ category, level = 0 }: { category: any, level?: number }) => {
+  const CategoryNode = ({ category, level = 0 }: { category: {id: string, name: string, children?: Array<{id: string, name: string}>}, level?: number }) => {
     const isExpanded = expandedCategories.includes(category.id)
     const hasChildren = category.children && category.children.length > 0
 
@@ -130,7 +130,7 @@ export default function CategoriesPage() {
           {hasChildren && (
             <CollapsibleContent>
               <div className="ml-7 space-y-1">
-                {category.children.map((child: any) => (
+                {category.children.map((child: {id: string, name: string}) => (
                   <CategoryNode key={child.id} category={child} level={level + 1} />
                 ))}
               </div>
