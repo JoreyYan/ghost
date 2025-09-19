@@ -176,7 +176,7 @@ export default function EntitiesPage() {
   }
 
   const getSocialIcon = (_platform: string) => {
-    switch (platform) {
+    switch (_platform) {
       case "github":
         return <Github className="h-4 w-4" />
       case "twitter":
