@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Brain, TestTube, CheckCircle, XCircle } from "lucide-react"
 
 export default function TestAIPage() {
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<{
+    summary: string
+    insights: string[]
+    trends: string[]
+    impact: string
+    recommendations: string[]
+    keyEntities: string[]
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testContent, setTestContent] = useState(`1. New protein folding model achieves 95% accuracy
 2. Machine learning breakthrough in drug discovery

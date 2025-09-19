@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, items } = await request.json()
+    const { prompt } = await request.json()
     
     // 检查是否有 OpenAI API Key
     const openaiApiKey = process.env.OPENAI_API_KEY
