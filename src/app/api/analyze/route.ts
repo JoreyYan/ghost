@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
           '参与社区讨论和贡献',
           '将新技术应用到实际项目中'
         ],
-        keyEntities: items.map((item: any) => item.author).filter(Boolean).slice(0, 5)
+        keyEntities: items.map((item: { author: string }) => item.author).filter(Boolean).slice(0, 5)
       })
     }
     

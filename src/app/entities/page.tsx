@@ -7,11 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Search, 
-  Users, 
-  Building2, 
-  ExternalLink,
+import {
+  Search,
+  Users,
+  Building2,
   Star,
   Activity,
   Github,

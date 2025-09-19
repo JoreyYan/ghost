@@ -4,15 +4,39 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon, TrendingUp, Users, FileText, AlertCircle, CheckCircle, RefreshCw, ExternalLink } from "lucide-react"
+import { CalendarIcon, TrendingUp, FileText, CheckCircle, RefreshCw, ExternalLink } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { AIService } from "@/lib/ai-service"
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
-  const [sources, setSources] = useState<any[]>([])
-  const [recentItems, setRecentItems] = useState<any[]>([])
-  const [dailyDigests, setDailyDigests] = useState<any[]>([])
+  const [sources, setSources] = useState<Array<{
+    id: string
+    name: string
+    kind: string
+    handle: string
+    active: boolean
+    created_at: string
+  }>>([])
+  const [recentItems, setRecentItems] = useState<Array<{
+    id: string
+    title: string
+    content: string
+    url: string
+    published_at: string
+    sources: {
+      name: string
+      kind: string
+    }
+  }>>([])
+  const [dailyDigests, setDailyDigests] = useState<Array<{
+    id: string
+    summary_md: string
+    created_at: string
+    sources: {
+      name: string
+    }
+  }>>([])
   const [stats, setStats] = useState({
     totalSources: 0,
     totalItems: 0,

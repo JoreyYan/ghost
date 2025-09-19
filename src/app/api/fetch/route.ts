@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FetchService } from '@/lib/fetch-service'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {

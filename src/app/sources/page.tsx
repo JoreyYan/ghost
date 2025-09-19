@@ -51,7 +51,7 @@ const getSourceStatus = async (sourceId: string) => {
       totalItems: itemCount?.length || 0,
       health: lastRun ? 'good' : 'unknown'
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       lastRun: 'Unknown',
       newItems: 0,

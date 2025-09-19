@@ -14,12 +14,25 @@ export interface DailyDigest {
   date: string
   summaryMd: string
   insightsMd: string
-  items: any[]
+  items: Array<{
+    id: string
+    title: string
+    url: string
+    published_at: string
+    content: string
+    author: string
+  }>
 }
 
 export class AIService {
   // 使用 OpenAI API 进行分析
-  static async analyzeContent(items: any[], sourceName: string): Promise<AnalysisResult> {
+  static async analyzeContent(items: Array<{
+    title: string
+    content: string
+    url: string
+    published_at: string
+    author: string
+  }>, sourceName: string): Promise<AnalysisResult> {
     try {
       // 构建分析提示词
       const prompt = this.buildAnalysisPrompt(items, sourceName)
@@ -51,7 +64,11 @@ export class AIService {
   }
   
   // 构建分析提示词
-  private static buildAnalysisPrompt(items: any[], sourceName: string): string {
+  private static buildAnalysisPrompt(items: Array<{
+    title: string
+    content: string
+    url: string
+  }>, sourceName: string): string {
     const itemsText = items.map((item, index) => 
       `${index + 1}. ${item.title}\n   ${item.content?.substring(0, 200)}...\n   URL: ${item.url}\n`
     ).join('\n')
@@ -178,7 +195,12 @@ ${this.assessContentQuality(items)}
   }
   
   // 获取默认分析结果（当 AI 服务不可用时）
-  private static getDefaultAnalysis(items: any[], sourceName: string): AnalysisResult {
+  private static getDefaultAnalysis(items: Array<{
+    title: string
+    content: string
+    author: string
+    tags?: string[]
+  }>, sourceName: string): AnalysisResult {
     return {
       summary: `今日从 ${sourceName} 获取了 ${items.length} 条新内容，涵盖了多个重要主题。`,
       insights: [
@@ -202,7 +224,10 @@ ${this.assessContentQuality(items)}
   }
   
   // 提取关键实体
-  private static extractKeyEntities(items: any[]): string[] {
+  private static extractKeyEntities(items: Array<{
+    author: string
+    tags?: string[]
+  }>): string[] {
     const entities = new Set<string>()
     
     items.forEach(item => {
@@ -225,7 +250,9 @@ ${this.assessContentQuality(items)}
   }
   
   // 获取主要作者
-  private static getTopAuthors(items: any[]): string {
+  private static getTopAuthors(items: Array<{
+    author: string
+  }>): string {
     const authorCount: { [key: string]: number } = {}
     
     items.forEach(item => {
@@ -243,7 +270,9 @@ ${this.assessContentQuality(items)}
   }
   
   // 获取热门标签
-  private static getTopTags(items: any[]): string {
+  private static getTopTags(items: Array<{
+    tags: string[]
+  }>): string {
     const tagCount: { [key: string]: number } = {}
     
     items.forEach(item => {
@@ -263,7 +292,9 @@ ${this.assessContentQuality(items)}
   }
   
   // 分析时间趋势
-  private static analyzeTimeTrends(items: any[]): string {
+  private static analyzeTimeTrends(items: Array<{
+    published_at: string
+  }>): string {
     const hourlyCount: { [key: number]: number } = {}
     
     items.forEach(item => {
@@ -278,7 +309,9 @@ ${this.assessContentQuality(items)}
   }
   
   // 评估内容质量
-  private static assessContentQuality(items: any[]): string {
+  private static assessContentQuality(items: Array<{
+    content: string
+  }>): string {
     const avgLength = items.reduce((sum, item) => 
       sum + (item.content?.length || 0), 0) / items.length
     

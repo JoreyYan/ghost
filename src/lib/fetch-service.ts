@@ -4,7 +4,15 @@ export interface FetchResult {
   success: boolean
   newItems: number
   error?: string
-  items?: any[]
+  items?: Array<{
+    url: string
+    title: string
+    author: string
+    published_at: string
+    content: string
+    tags: string[]
+    metadata: Record<string, unknown>
+  }>
 }
 
 export interface GitHubRepoData {
@@ -52,7 +60,17 @@ export class FetchService {
         }
       })
       
-      const commits = commitsResponse.ok ? await commitsResponse.json() : []
+      const commits = commitsResponse.ok ? await commitsResponse.json() as Array<{
+        html_url: string
+        sha: string
+        commit: {
+          message: string
+          author: {
+            name: string
+            date: string
+          }
+        }
+      }> : []
       
       // 获取最近的 releases
       const releasesResponse = await fetch(`${apiUrl}/releases?per_page=5`, {
@@ -62,10 +80,27 @@ export class FetchService {
         }
       })
       
-      const releases = releasesResponse.ok ? await releasesResponse.json() : []
+      const releases = releasesResponse.ok ? await releasesResponse.json() as Array<{
+        html_url: string
+        name: string
+        tag_name: string
+        body: string
+        published_at: string
+        author: {
+          login: string
+        }
+      }> : []
       
       // 构建项目数据
-      const items = [
+      const items: Array<{
+        url: string
+        title: string
+        author: string
+        published_at: string
+        content: string
+        tags: string[]
+        metadata: Record<string, unknown>
+      }> = [
         {
           url: repoData.html_url,
           title: `Repository Update: ${repoData.name}`,
@@ -83,7 +118,7 @@ export class FetchService {
       ]
       
       // 添加最近的 commits
-      commits.forEach((commit: any) => {
+      commits.forEach((commit) => {
         items.push({
           url: commit.html_url,
           title: `Commit: ${commit.commit.message.split('\n')[0]}`,
@@ -99,7 +134,7 @@ export class FetchService {
       })
       
       // 添加最近的 releases
-      releases.forEach((release: any) => {
+      releases.forEach((release) => {
         items.push({
           url: release.html_url,
           title: `Release: ${release.name || release.tag_name}`,
@@ -131,7 +166,7 @@ export class FetchService {
   }
   
   // 从 RSS 源获取数据
-  static async fetchRSSFeed(rssUrl: string): Promise<FetchResult> {
+  static async fetchRSSFeed(_rssUrl: string): Promise<FetchResult> {
     try {
       // 这里需要后端服务来解析 RSS，因为浏览器有 CORS 限制
       // 暂时返回模拟数据
@@ -145,7 +180,11 @@ export class FetchService {
             author: 'Dr. Smith',
             published_at: new Date().toISOString(),
             content: 'Abstract of the latest research...',
-            tags: ['research', 'ai']
+            tags: ['research', 'ai'],
+            metadata: {
+              type: 'rss_item',
+              source: 'rss_feed'
+            }
           }
         ]
       }
