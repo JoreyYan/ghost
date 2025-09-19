@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,8 +11,24 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Search, Filter, Play, Eye, Edit, Trash2, AlertCircle, CheckCircle, Clock } from "lucide-react"
 import { AddSourceDialog } from "@/components/sources/add-source-dialog"
 import { SourceDetailDrawer } from "@/components/sources/source-detail-drawer"
+import { supabase } from "@/lib/supabase"
 
-// Mock data
+// Type definition for source data
+interface Source {
+  id: string
+  name: string
+  kind: string
+  handle: string
+  active: boolean
+  fetch_cron: string | null
+  created_at: string
+  categories?: string[]
+  last_run?: string
+  new_items?: number
+  health?: string
+}
+
+// Mock data (fallback)
 const mockSources = [
   {
     id: "1",
@@ -70,38 +86,115 @@ export default function SourcesPage() {
   const [typeFilter, setTypeFilter] = useState("all")
   const [selectedSource, setSelectedSource] = useState<string | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [sources, setSources] = useState<Source[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredSources = mockSources.filter(source => {
+  // Fetch sources from database
+  useEffect(() => {
+    const fetchSources = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sources')
+          .select(`
+            *,
+            source_categories (
+              categories (
+                name
+              )
+            )
+          `)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching sources:', error)
+          // Fallback to mock data
+          setSources(mockSources.map(mock => ({
+            id: mock.id,
+            name: mock.name,
+            kind: mock.type.toLowerCase(),
+            handle: mock.url,
+            active: mock.status === 'active',
+            fetch_cron: null,
+            created_at: new Date().toISOString(),
+            categories: mock.categories,
+            last_run: mock.lastRun,
+            new_items: mock.newItems,
+            health: mock.health
+          })))
+        } else {
+          // Transform database data to match our interface
+          const transformedSources = data?.map(source => ({
+            ...source,
+            categories: source.source_categories?.map((sc: any) => sc.categories?.name).filter(Boolean) || [],
+            last_run: 'Never', // TODO: Get from fetch_runs table
+            new_items: 0, // TODO: Get from items count
+            health: source.active ? 'good' : 'error'
+          })) || []
+          setSources(transformedSources)
+        }
+      } catch (err) {
+        console.error('Error:', err)
+        // Fallback to mock data
+        setSources(mockSources.map(mock => ({
+          id: mock.id,
+          name: mock.name,
+          kind: mock.type.toLowerCase(),
+          handle: mock.url,
+          active: mock.status === 'active',
+          fetch_cron: null,
+          created_at: new Date().toISOString(),
+          categories: mock.categories,
+          last_run: mock.lastRun,
+          new_items: mock.newItems,
+          health: mock.health
+        })))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSources()
+  }, [])
+
+  const filteredSources = sources.filter(source => {
     const matchesSearch = source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         source.url.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || source.status === statusFilter
-    const matchesType = typeFilter === "all" || source.type === typeFilter
+                         source.handle.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === "all" || 
+                         (statusFilter === "active" && source.active) ||
+                         (statusFilter === "inactive" && !source.active)
+    const matchesType = typeFilter === "all" || source.kind === typeFilter.toLowerCase()
     return matchesSearch && matchesStatus && matchesType
   })
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
+  const getStatusIcon = (active: boolean, health?: string) => {
+    if (!active) {
+      return <Clock className="h-4 w-4 text-gray-500" />
+    }
+    switch (health) {
+      case "good":
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case "warning":
         return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case "inactive":
-        return <Clock className="h-4 w-4 text-gray-500" />
-      default:
+      case "error":
         return <AlertCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <CheckCircle className="h-4 w-4 text-green-500" />
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
+  const getStatusBadge = (active: boolean, health?: string) => {
+    if (!active) {
+      return <Badge variant="outline">Inactive</Badge>
+    }
+    switch (health) {
+      case "good":
         return <Badge variant="default" className="bg-green-500">Active</Badge>
       case "warning":
         return <Badge variant="secondary" className="bg-yellow-500 text-white">Warning</Badge>
-      case "inactive":
-        return <Badge variant="outline">Inactive</Badge>
-      default:
+      case "error":
         return <Badge variant="destructive">Error</Badge>
+      default:
+        return <Badge variant="default" className="bg-green-500">Active</Badge>
     }
   }
 
@@ -176,79 +269,92 @@ export default function SourcesPage() {
           <CardTitle>Data Sources ({filteredSources.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Run</TableHead>
-                <TableHead>New Items</TableHead>
-                <TableHead>Health</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSources.map((source) => (
-                <TableRow key={source.id}>
-                  <TableCell className="font-medium">{source.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{source.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {source.categories.map((category) => (
-                        <Badge key={category} variant="secondary" className="text-xs">
-                          {category}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(source.status)}
-                      {getStatusBadge(source.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {source.lastRun}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={source.newItems > 0 ? "default" : "outline"}>
-                      {source.newItems}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(source.health)}
-                      <span className="text-sm capitalize">{source.health}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setSelectedSource(source.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">Loading sources...</div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Categories</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Run</TableHead>
+                  <TableHead>New Items</TableHead>
+                  <TableHead>Health</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredSources.map((source) => (
+                  <TableRow key={source.id}>
+                    <TableCell className="font-medium">{source.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{source.kind.toUpperCase()}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {source.categories?.map((category) => (
+                          <Badge key={category} variant="secondary" className="text-xs">
+                            {category}
+                          </Badge>
+                        )) || <span className="text-muted-foreground text-sm">No categories</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(source.active, source.health)}
+                        {getStatusBadge(source.active, source.health)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {source.last_run || 'Never'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={(source.new_items || 0) > 0 ? "default" : "outline"}>
+                        {source.new_items || 0}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(source.active, source.health)}
+                        <span className="text-sm capitalize">{source.health || 'unknown'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Play className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setSelectedSource(source.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredSources.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      No sources found. Add your first source to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
