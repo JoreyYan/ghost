@@ -77,7 +77,7 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
         kind: formData.type.toLowerCase(),
         handle: formData.url,
         active: true,
-        fetch_cron: formData.frequency ? `${formData.time} * * *` : null
+        fetch_cron: formData.schedule ? `${formData.time} * * *` : null
       }
 
       // 保存到 Supabase
