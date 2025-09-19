@@ -236,7 +236,7 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
                   <div>
                     <strong>Sample Items:</strong>
                     <ul className="list-disc list-inside ml-4 mt-1">
-                      {testResults.sampleItems.map((item: string, index: number) => (
+                      {testResults.sampleItems?.map((item: string, index: number) => (
                         <li key={index}>{item}</li>
                       ))}
                     </ul>
