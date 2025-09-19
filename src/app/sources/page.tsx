@@ -11,6 +11,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Search, Filter, Play, Eye, Edit, Trash2, AlertCircle, CheckCircle, Clock } from "lucide-react"
 import { AddSourceDialog } from "@/components/sources/add-source-dialog"
 import { SourceDetailDrawer } from "@/components/sources/source-detail-drawer"
+import { EditSourceDialog } from "@/app/sources/edit-source-dialog"
 import { supabase } from "@/lib/supabase"
 
 // Type definition for source data
@@ -67,6 +68,12 @@ export default function SourcesPage() {
   const [typeFilter, setTypeFilter] = useState("all")
   const [selectedSource, setSelectedSource] = useState<string | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [editingSource, setEditingSource] = useState<{
+    id: string
+    name: string
+    kind: string
+    handle: string
+  } | null>(null)
   const [sources, setSources] = useState<Source[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchingSource, setFetchingSource] = useState<string | null>(null)
@@ -330,7 +337,16 @@ export default function SourcesPage() {
                                >
                                  <Eye className="h-4 w-4" />
                                </Button>
-                               <Button variant="ghost" size="sm">
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm"
+                                 onClick={() => setEditingSource({
+                                   id: source.id,
+                                   name: source.name,
+                                   kind: source.kind,
+                                   handle: source.handle
+                                 })}
+                               >
                                  <Edit className="h-4 w-4" />
                                </Button>
                                <Button variant="ghost" size="sm">
@@ -353,13 +369,26 @@ export default function SourcesPage() {
         </CardContent>
       </Card>
 
-      {/* Source Detail Drawer */}
-      {selectedSource && (
-        <SourceDetailDrawer
-          sourceId={selectedSource}
-          onClose={() => setSelectedSource(null)}
-        />
-      )}
+             {/* Source Detail Drawer */}
+             {selectedSource && (
+               <SourceDetailDrawer
+                 sourceId={selectedSource}
+                 onClose={() => setSelectedSource(null)}
+               />
+             )}
+
+             {/* Edit Source Dialog */}
+             {editingSource && (
+               <Dialog open={!!editingSource} onOpenChange={() => setEditingSource(null)}>
+                 <EditSourceDialog
+                   sourceId={editingSource.id}
+                   sourceName={editingSource.name}
+                   sourceKind={editingSource.kind}
+                   sourceHandle={editingSource.handle}
+                   onClose={() => setEditingSource(null)}
+                 />
+               </Dialog>
+             )}
     </div>
   )
 }
