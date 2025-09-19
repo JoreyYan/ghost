@@ -71,10 +71,17 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
 
   const handleSubmit = async () => {
     try {
-      // 准备数据
+      // 准备数据 - 映射类型到数据库允许的值
+      const typeMapping: { [key: string]: string } = {
+        'RSS': 'rss',
+        'GitHub': 'github_repo', // 默认作为仓库类型
+        'JSON': 'json',
+        'HTML': 'html'
+      }
+      
       const sourceData = {
         name: formData.name,
-        kind: formData.type.toLowerCase(),
+        kind: typeMapping[formData.type] || 'json', // 默认使用 json
         handle: formData.url,
         active: true,
         fetch_cron: formData.schedule ? `${formData.time} * * *` : null
