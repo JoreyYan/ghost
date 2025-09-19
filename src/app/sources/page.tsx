@@ -125,7 +125,7 @@ export default function SourcesPage() {
           // Transform database data to match our interface
           const transformedSources = data?.map(source => ({
             ...source,
-            categories: source.source_categories?.map((sc: any) => sc.categories?.name).filter(Boolean) || [],
+            categories: source.source_categories?.map((sc: {categories: {name: string}}) => sc.categories?.name).filter(Boolean) || [],
             last_run: 'Never', // TODO: Get from fetch_runs table
             new_items: 0, // TODO: Get from items count
             health: source.active ? 'good' : 'error'

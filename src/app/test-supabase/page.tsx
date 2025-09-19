@@ -23,7 +23,7 @@ export default function TestSupabasePage() {
 
     try {
       // Test 1: Basic connection - try to query categories table
-      const { data: categories, error: connectionError } = await supabase
+      const { data: _categories, error: connectionError } = await supabase
         .from('categories')
         .select('id, name')
         .limit(5)
@@ -42,7 +42,7 @@ export default function TestSupabasePage() {
           if (!error) {
             existingTables.push(table)
           }
-        } catch (e) {
+        } catch (_e) {
           // Table doesn't exist or can't be accessed
         }
       }

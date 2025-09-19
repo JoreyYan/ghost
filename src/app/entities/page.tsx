@@ -175,18 +175,6 @@ export default function EntitiesPage() {
     return type === "person" ? <Users className="h-4 w-4" /> : <Building2 className="h-4 w-4" />
   }
 
-  const getSocialIcon = (_platform: string) => {
-    switch (_platform) {
-      case "github":
-        return <Github className="h-4 w-4" />
-      case "twitter":
-        return <Twitter className="h-4 w-4" />
-      case "website":
-        return <Globe className="h-4 w-4" />
-      default:
-        return <ExternalLink className="h-4 w-4" />
-    }
-  }
 
   return (
     <div className="space-y-6">
