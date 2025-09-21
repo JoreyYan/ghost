@@ -27,7 +27,7 @@ export interface GitHubRepoData {
 }
 
 export class FetchService {
-  // 从 GitHub 仓库获取最新信息
+  // 从 GitHub 仓库获取 README 内容（简化版本）
   static async fetchGitHubRepo(repoUrl: string): Promise<FetchResult> {
     try {
       // 解析 GitHub URL
@@ -37,61 +37,72 @@ export class FetchService {
       }
       
       const [, owner, repo] = match
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}`
       
-      const response = await fetch(apiUrl, {
+      // 使用 GitHub API 获取 README 原始内容
+      const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/readme`
+      console.log('Fetching README from GitHub API:', githubApiUrl)
+      
+      const response = await fetch(githubApiUrl, {
         headers: {
-          'Accept': 'application/vnd.github+json',
-          'User-Agent': 'NewsIntelligence/1.0'
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'News-Intelligence-System'
         }
       })
       
       if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status}`)
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText}`)
       }
       
-      const repoData: GitHubRepoData = await response.json()
+      const data = await response.json()
       
-      // 获取最近的 commits
-      const commitsResponse = await fetch(`${apiUrl}/commits?per_page=10`, {
-        headers: {
-          'Accept': 'application/vnd.github+json',
-          'User-Agent': 'NewsIntelligence/1.0'
-        }
-      })
+      // 解码 base64 内容
+      const readmeContent = Buffer.from(data.content, 'base64').toString('utf-8')
+      console.log('README content length:', readmeContent.length)
       
-      const commits = commitsResponse.ok ? await commitsResponse.json() as Array<{
-        html_url: string
-        sha: string
-        commit: {
-          message: string
-          author: {
-            name: string
-            date: string
+      // 立即进行 AI 分析，生成 50 字简洁总结
+      let aiSummary = ''
+      try {
+        console.log('Generating concise AI summary for README...')
+        const { AIService } = await import('./ai-service')
+        
+        const analysisResult = await AIService.analyzeContent([{
+          title: `${owner}/${repo} - README 更新`,
+          content: readmeContent,
+          url: repoUrl,
+          published_at: new Date().toISOString(),
+          author: owner
+        }], `${owner}/${repo}`, '这是一个蛋白质设计论文集合的 GitHub README，请重点关注最新添加的论文、研究方法、技术突破、作者信息等')
+        
+        // 生成 50 字简洁总结
+        if (analysisResult.summary) {
+          aiSummary = analysisResult.summary.substring(0, 50) + '...'
+        } else if (analysisResult.insights && analysisResult.insights.length > 0) {
+          aiSummary = analysisResult.insights[0].substring(0, 50) + '...'
+        } else {
+          // 提取 README 中的关键信息
+          const lines = readmeContent.split('\n')
+          const latestPapersLine = lines.find(line => line.includes('Papers last week'))
+          if (latestPapersLine) {
+            aiSummary = latestPapersLine.substring(0, 50) + '...'
+          } else {
+            aiSummary = `${owner}/${repo} 仓库更新，包含蛋白质设计相关的最新论文和研究进展...`
           }
         }
-      }> : []
-      
-      // 获取最近的 releases
-      const releasesResponse = await fetch(`${apiUrl}/releases?per_page=5`, {
-        headers: {
-          'Accept': 'application/vnd.github+json',
-          'User-Agent': 'NewsIntelligence/1.0'
+        
+        console.log('Concise AI summary generated:', aiSummary)
+      } catch (error) {
+        console.error('AI analysis failed, using fallback:', error)
+        // 如果 AI 分析失败，使用简单的文本提取
+        const lines = readmeContent.split('\n')
+        const latestPapersLine = lines.find(line => line.includes('Papers last week'))
+        if (latestPapersLine) {
+          aiSummary = latestPapersLine.substring(0, 50) + '...'
+        } else {
+          aiSummary = `${owner}/${repo} 仓库更新，包含蛋白质设计相关的最新论文和研究进展...`
         }
-      })
+      }
       
-      const releases = releasesResponse.ok ? await releasesResponse.json() as Array<{
-        html_url: string
-        name: string
-        tag_name: string
-        body: string
-        published_at: string
-        author: {
-          login: string
-        }
-      }> : []
-      
-      // 构建项目数据
+      // 创建单个条目，包含简洁的 AI 总结
       const items: Array<{
         url: string
         title: string
@@ -100,54 +111,26 @@ export class FetchService {
         content: string
         tags: string[]
         metadata: Record<string, unknown>
-      }> = [
-        {
-          url: repoData.html_url,
-          title: `Repository Update: ${repoData.name}`,
-          author: owner,
-          published_at: repoData.updated_at,
-          content: repoData.description || 'No description available',
-          tags: repoData.topics || [],
-          metadata: {
-            stars: repoData.stargazers_count,
-            forks: repoData.forks_count,
-            language: repoData.language,
-            type: 'repository_info'
-          }
+      }> = []
+      
+      items.push({
+        url: repoUrl,
+        title: `${owner}/${repo} - 最新更新`,
+        author: owner,
+        published_at: new Date().toISOString(),
+        content: aiSummary,
+        tags: ['github', 'readme', 'protein-design', 'deep-learning', 'ai-summary'],
+        metadata: {
+          type: 'github_readme_summary',
+          source: 'github_api',
+          owner: owner,
+          repo: repo,
+          sha: data.sha,
+          size: data.size,
+          originalUrl: repoUrl
         }
-      ]
-      
-      // 添加最近的 commits
-      commits.forEach((commit) => {
-        items.push({
-          url: commit.html_url,
-          title: `Commit: ${commit.commit.message.split('\n')[0]}`,
-          author: commit.commit.author.name,
-          published_at: commit.commit.author.date,
-          content: commit.commit.message,
-          tags: ['commit'],
-          metadata: {
-            sha: commit.sha,
-            type: 'commit'
-          }
-        })
       })
-      
-      // 添加最近的 releases
-      releases.forEach((release) => {
-        items.push({
-          url: release.html_url,
-          title: `Release: ${release.name || release.tag_name}`,
-          author: release.author?.login || 'Unknown',
-          published_at: release.published_at,
-          content: release.body || 'No release notes',
-          tags: ['release'],
-          metadata: {
-            tag_name: release.tag_name,
-            type: 'release'
-          }
-        })
-      })
+
       
       return {
         success: true,
@@ -156,7 +139,7 @@ export class FetchService {
       }
       
     } catch (error) {
-      console.error('GitHub fetch error:', error)
+      console.error('GitHub README fetch error:', error)
       return {
         success: false,
         newItems: 0,
