@@ -42,29 +42,64 @@ export async function POST(request: NextRequest) {
     }
     messages.push({ role: 'user', content: userPrompt || prompt })
     
-    // 调用 OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages,
-        max_tokens: 1000,
-        temperature: 0.7
-      })
-    })
+    // 调用 OpenAI API（带重试机制）
+    let response: Response | undefined
+    let retryCount = 0
+    const maxRetries = 2
     
-    if (!response.ok) {
-      const errorData = await response.text()
+    while (retryCount <= maxRetries) {
+      try {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages,
+            max_tokens: 1000,
+            temperature: 0.7
+          })
+        })
+        
+        // 如果是 429 错误且还有重试次数，等待后重试
+        if (response.status === 429 && retryCount < maxRetries) {
+          const waitTime = Math.pow(2, retryCount) * 1000 // 指数退避
+          console.log(`Rate limit hit, waiting ${waitTime}ms before retry ${retryCount + 1}`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          retryCount++
+          continue
+        }
+        
+        break // 成功或达到最大重试次数
+      } catch (error) {
+        if (retryCount < maxRetries) {
+          retryCount++
+          const waitTime = Math.pow(2, retryCount) * 1000
+          console.log(`Request failed, waiting ${waitTime}ms before retry ${retryCount}`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
+        }
+        throw error
+      }
+    }
+    
+    if (!response || !response.ok) {
+      const errorData = response ? await response.text() : 'No response received'
       console.error('OpenAI API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData
+        status: response?.status,
+        statusText: response?.statusText,
+        errorData,
+        retryCount
       })
-      throw new Error(`OpenAI API error: ${response.status} - ${response.statusText}`)
+      
+      // 为 429 错误提供更友好的信息
+      if (response?.status === 429) {
+        throw new Error(`OpenAI API 调用频率超限 (429) - 请稍后重试。这通常是因为短时间内发送了太多请求。`)
+      }
+      
+      throw new Error(`OpenAI API error: ${response?.status || 'Unknown'} - ${response?.statusText || 'No response'}`)
     }
     
     const data = await response.json()
