@@ -72,8 +72,14 @@ export function EditSourceDialog({
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      // 构建更新数据，只包含基本字段
-      const updateData = {
+      // 构建更新数据，包含所有可能的字段
+      const updateData: {
+        name: string;
+        kind: string;
+        handle: string;
+        description?: string;
+        ai_focus?: string;
+      } = {
         name: formData.name,
         kind: formData.kind,
         handle: formData.handle
