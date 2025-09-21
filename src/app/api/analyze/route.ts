@@ -7,13 +7,23 @@ export async function POST(request: NextRequest) {
     // 检查是否有 OpenAI API Key
     const openaiApiKey = process.env.OPENAI_API_KEY
     
+    console.log('Environment check:', {
+      nodeEnv: process.env.NODE_ENV,
+      hasOpenAIKey: !!openaiApiKey,
+      keyPrefix: openaiApiKey ? openaiApiKey.substring(0, 20) + '...' : 'NOT SET'
+    })
+    
     if (!openaiApiKey) {
       // 如果没有 API Key，返回错误信息
       return NextResponse.json(
         { 
           error: 'OpenAI API Key not configured',
           message: '请在 Vercel 环境变量中配置 OPENAI_API_KEY',
-          details: '获取 API Key: https://platform.openai.com/api-keys'
+          details: '获取 API Key: https://platform.openai.com/api-keys',
+          debug: {
+            nodeEnv: process.env.NODE_ENV,
+            allEnvKeys: Object.keys(process.env).filter(key => key.includes('OPENAI'))
+          }
         },
         { status: 400 }
       )
@@ -48,7 +58,13 @@ export async function POST(request: NextRequest) {
     })
     
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
+      const errorData = await response.text()
+      console.error('OpenAI API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      })
+      throw new Error(`OpenAI API error: ${response.status} - ${response.statusText}`)
     }
     
     const data = await response.json()
@@ -62,9 +78,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Analysis API error:', error)
     
-    // 返回错误响应
+    // 返回详细的错误响应
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorType = error instanceof Error ? error.name : 'Error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
     return NextResponse.json(
-      { error: 'Analysis failed' },
+      { 
+        error: 'Analysis failed',
+        message: errorMessage,
+        type: errorType,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      },
       { status: 500 }
     )
   }
