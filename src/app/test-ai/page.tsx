@@ -72,7 +72,12 @@ ${testContent}
       if (response.ok) {
         setResult(data)
       } else {
-        setError(data.error || 'Unknown error')
+        // 显示详细的错误信息
+        const errorMessage = data.message || data.error || 'Unknown error'
+        const errorDetails = data.details || ''
+        const errorType = data.type || ''
+        
+        setError(`${errorMessage}${errorDetails ? ` - ${errorDetails}` : ''}${errorType ? ` (${errorType})` : ''}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
@@ -146,6 +151,23 @@ ${testContent}
             <div className="p-4 bg-red-50 border border-red-200 rounded-md">
               <h4 className="font-medium text-red-800">错误信息:</h4>
               <p className="text-red-700 mt-1">{error}</p>
+              
+              {/* 调试信息 */}
+              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded text-sm">
+                <p className="font-medium text-gray-800">调试信息:</p>
+                <p className="text-gray-600 mt-1">
+                  环境变量已正确配置，问题可能在于：
+                </p>
+                <ul className="list-disc list-inside ml-4 mt-2 text-gray-600">
+                  <li>OpenAI API 网络连接问题</li>
+                  <li>API Key 权限或配额限制</li>
+                  <li>OpenAI 服务暂时不可用</li>
+                </ul>
+                <p className="text-gray-500 mt-2 text-xs">
+                  请检查 Vercel 函数日志获取更多详细信息
+                </p>
+              </div>
+              
               <div className="mt-2 text-sm text-red-600">
                 <p>可能的原因:</p>
                 <ul className="list-disc list-inside ml-4">
