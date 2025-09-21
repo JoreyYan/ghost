@@ -326,8 +326,31 @@ export class FetchService {
       
       // 专门处理 GitHub README 格式
       if (htmlUrl.includes('github.com') && htmlUrl.includes('README.md')) {
+        // 先解码 HTML 实体
+        const decodeHtmlEntities = (text: string) => {
+          return text
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/\\u003c/g, '<')
+            .replace(/\\u003e/g, '>')
+            .replace(/\\u0026/g, '&')
+            .replace(/\\u0027/g, "'")
+            .replace(/\\u0022/g, '"')
+        }
+        
+        // 移除 HTML 标签，提取纯文本
+        const cleanHtml = htmlContent
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        
+        const decodedContent = decodeHtmlEntities(cleanHtml)
+        
         // 提取最新论文列表
-        const latestPapersMatch = htmlContent.match(/Papers last week, updated on ([^:]+):([\s\S]*?)(?=\n\n|\n###|\n##|$)/i)
+        const latestPapersMatch = decodedContent.match(/Papers last week, updated on ([^:]+):([\s\S]*?)(?=\n\n|\n###|\n##|$)/i)
         
         if (latestPapersMatch) {
           const updateDate = latestPapersMatch[1].trim()
@@ -359,15 +382,18 @@ export class FetchService {
                   }
                 })
                 
-                // 构建论文内容
-                const content = entry.trim()
+                // 构建论文内容 - 清理和格式化
+                const cleanContent = entry
+                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1: $2') // 转换链接格式
+                  .replace(/\s+/g, ' ')
+                  .trim()
                 
                 items.push({
                   url: metadata['code'] || metadata['Supplementary'] || htmlUrl,
                   title: title,
                   author: 'GitHub README',
                   published_at: new Date().toISOString(),
-                  content: content,
+                  content: cleanContent,
                   tags: ['paper', 'protein-design', 'deep-learning', 'github'],
                   metadata: {
                     type: 'latest_paper',
