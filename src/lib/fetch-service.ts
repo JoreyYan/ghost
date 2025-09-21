@@ -292,158 +292,126 @@ export class FetchService {
     }
   }
   
-  // 从 HTML 源获取数据（专门处理 GitHub README）
+  // 从 GitHub README 获取数据（简化版本）
   static async fetchHTMLContent(htmlUrl: string, sourceId?: string): Promise<FetchResult> {
     try {
-      console.log('Fetching HTML content from:', htmlUrl)
+      console.log('Fetching GitHub README content from:', htmlUrl)
       
-      // 使用代理服务来避免 CORS 问题
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(htmlUrl)}`
-      
-      const response = await fetch(proxyUrl)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch HTML: ${response.statusText}`)
-      }
-      
-      const data = await response.json()
-      let htmlContent = data.contents
-      
-      // 检查是否是 base64 编码的内容
-      if (htmlContent.startsWith('data:text/html; charset=utf-8;base64,')) {
-        const base64Data = htmlContent.split(',')[1]
-        htmlContent = Buffer.from(base64Data, 'base64').toString('utf-8')
-      }
-      
-      const items: Array<{
-        url: string
-        title: string
-        author: string
-        published_at: string
-        content: string
-        tags: string[]
-        metadata: Record<string, unknown>
-      }> = []
-      
-      // 专门处理 GitHub README 格式
+      // 专门处理 GitHub README
       if (htmlUrl.includes('github.com') && htmlUrl.includes('README.md')) {
-        // 先解码 HTML 实体
-        const decodeHtmlEntities = (text: string) => {
-          return text
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/\\u003c/g, '<')
-            .replace(/\\u003e/g, '>')
-            .replace(/\\u0026/g, '&')
-            .replace(/\\u0027/g, "'")
-            .replace(/\\u0022/g, '"')
+        // 提取仓库信息
+        const repoMatch = htmlUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
+        if (!repoMatch) {
+          throw new Error('Invalid GitHub URL format')
         }
         
-        // 移除 HTML 标签，提取纯文本
-        const cleanHtml = htmlContent
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
+        const [, owner, repo] = repoMatch
         
-        const decodedContent = decodeHtmlEntities(cleanHtml)
+        // 使用 GitHub API 获取 README 原始内容
+        const githubApiUrl = `https://api.github.com/repos/${owner}/${repo}/readme`
+        console.log('Fetching from GitHub API:', githubApiUrl)
         
-        // 提取最新论文列表
-        const latestPapersMatch = decodedContent.match(/Papers last week, updated on ([^:]+):([\s\S]*?)(?=\n\n|\n###|\n##|$)/i)
-        
-        if (latestPapersMatch) {
-          const updateDate = latestPapersMatch[1].trim()
-          const papersContent = latestPapersMatch[2].trim()
-          
-          console.log('Found latest papers section:', updateDate)
-          console.log('Papers content length:', papersContent.length)
-          
-          // 解析每个论文条目
-          const paperEntries = papersContent.split(/\n\s*\*\s*/).filter((entry: string) => entry.trim())
-          
-          for (const entry of paperEntries) {
-            if (entry.trim()) {
-              // 提取论文标题（第一行）
-              const lines = entry.split('\n').filter((line: string) => line.trim())
-              if (lines.length > 0) {
-                const title = lines[0].trim()
-                
-                // 提取论文链接和元数据
-                const links = entry.match(/\[([^\]]+)\]\(([^)]+)\)/g) || []
-                const metadata: Record<string, string> = {}
-                
-                links.forEach((link: string) => {
-                  const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/)
-                  if (match) {
-                    const linkText = match[1]
-                    const linkUrl = match[2]
-                    metadata[linkText] = linkUrl
-                  }
-                })
-                
-                // 构建论文内容 - 清理和格式化
-                const cleanContent = entry
-                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1: $2') // 转换链接格式
-                  .replace(/\s+/g, ' ')
-                  .trim()
-                
-                items.push({
-                  url: metadata['code'] || metadata['Supplementary'] || htmlUrl,
-                  title: title,
-                  author: 'GitHub README',
-                  published_at: new Date().toISOString(),
-                  content: cleanContent,
-                  tags: ['paper', 'protein-design', 'deep-learning', 'github'],
-                  metadata: {
-                    type: 'latest_paper',
-                    source: 'github_readme',
-                    updateDate: updateDate,
-                    links: metadata,
-                    originalUrl: htmlUrl
-                  }
-                })
-              }
-            }
+        const response = await fetch(githubApiUrl, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'News-Intelligence-System'
           }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`GitHub API error: ${response.status} ${response.statusText}`)
         }
         
-        // 如果没有找到最新论文部分，创建一个通用的条目
-        if (items.length === 0) {
-          // 提取 README 的主要内容
-          const mainContentMatch = htmlContent.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
-                                 htmlContent.match(/<div[^>]*class="[^"]*markdown[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-          
-          let content = ''
-          if (mainContentMatch) {
-            // 移除 HTML 标签，提取纯文本
-            content = mainContentMatch[1]
-              .replace(/<[^>]*>/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim()
-              .substring(0, 1000) // 限制长度
+        const data = await response.json()
+        
+        // 解码 base64 内容
+        const readmeContent = Buffer.from(data.content, 'base64').toString('utf-8')
+        console.log('README content length:', readmeContent.length)
+        
+        // 创建单个条目，包含完整 README 内容
+        const items: Array<{
+          url: string
+          title: string
+          author: string
+          published_at: string
+          content: string
+          tags: string[]
+          metadata: Record<string, unknown>
+        }> = []
+        
+        items.push({
+          url: htmlUrl,
+          title: `${owner}/${repo} - README 更新`,
+          author: owner,
+          published_at: new Date().toISOString(),
+          content: readmeContent,
+          tags: ['github', 'readme', 'protein-design', 'deep-learning'],
+          metadata: {
+            type: 'github_readme',
+            source: 'github_api',
+            owner: owner,
+            repo: repo,
+            sha: data.sha,
+            size: data.size,
+            originalUrl: htmlUrl
           }
-          
-          items.push({
-            url: htmlUrl,
-            title: 'GitHub README Update',
-            author: 'GitHub README',
-            published_at: new Date().toISOString(),
-            content: content || 'GitHub README content',
-            tags: ['readme', 'github'],
-            metadata: {
-              type: 'readme_content',
-              source: 'github_readme',
-              originalUrl: htmlUrl
-            }
-          })
+        })
+        
+        // 保存到数据库
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('items')
+          .select('url')
+          .in('url', items.map(item => item.url))
+
+        if (fetchError) throw fetchError
+
+        const existingUrls = new Set(existingItems?.map(item => item.url))
+        const newItems = items.filter(item => !existingUrls.has(item.url))
+
+        if (newItems.length > 0) {
+          const { error: insertError } = await supabase
+            .from('items')
+            .insert(newItems.map(item => ({
+              source_id: sourceId || 'unknown-source',
+              url: item.url,
+              title: item.title,
+              author: item.author,
+              published_at: item.published_at,
+              content: item.content,
+              tags: item.tags,
+              raw_ref: JSON.stringify(item.metadata),
+              content_sha: item.url
+            })))
+          if (insertError) throw insertError
+        }
+
+        return {
+          success: true,
+          newItems: newItems.length,
+          items: newItems
         }
       } else {
-        // 处理其他 HTML 内容
+        // 处理其他 HTML 内容（保持原有逻辑）
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(htmlUrl)}`
+        
+        const response = await fetch(proxyUrl)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch HTML: ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        let htmlContent = data.contents
+        
+        // 检查是否是 base64 编码的内容
+        if (htmlContent.startsWith('data:text/html; charset=utf-8;base64,')) {
+          const base64Data = htmlContent.split(',')[1]
+          htmlContent = Buffer.from(base64Data, 'base64').toString('utf-8')
+        }
+        
         const titleMatch = htmlContent.match(/<title[^>]*>([^<]*)<\/title>/i)
         const contentMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
         
-        items.push({
+        const items = [{
           url: htmlUrl,
           title: titleMatch ? titleMatch[1].trim() : 'HTML Content',
           author: 'Unknown',
@@ -455,45 +423,45 @@ export class FetchService {
             source: 'html_fetch',
             originalUrl: htmlUrl
           }
-        })
-      }
-      
-      // 保存到数据库
-      const { data: existingItems, error: fetchError } = await supabase
-        .from('items')
-        .select('url')
-        .in('url', items.map(item => item.url))
-
-      if (fetchError) throw fetchError
-
-      const existingUrls = new Set(existingItems?.map(item => item.url))
-      const newItems = items.filter(item => !existingUrls.has(item.url))
-
-      if (newItems.length > 0) {
-        const { error: insertError } = await supabase
+        }]
+        
+        // 保存到数据库
+        const { data: existingItems, error: fetchError } = await supabase
           .from('items')
-          .insert(newItems.map(item => ({
-            source_id: sourceId || 'unknown-source',
-            url: item.url,
-            title: item.title,
-            author: item.author,
-            published_at: item.published_at,
-            content: item.content,
-            tags: item.tags,
-            raw_ref: JSON.stringify(item.metadata),
-            content_sha: item.url
-          })))
-        if (insertError) throw insertError
-      }
+          .select('url')
+          .in('url', items.map(item => item.url))
 
-      return {
-        success: true,
-        newItems: newItems.length,
-        items: newItems
+        if (fetchError) throw fetchError
+
+        const existingUrls = new Set(existingItems?.map(item => item.url))
+        const newItems = items.filter(item => !existingUrls.has(item.url))
+
+        if (newItems.length > 0) {
+          const { error: insertError } = await supabase
+            .from('items')
+            .insert(newItems.map(item => ({
+              source_id: sourceId || 'unknown-source',
+              url: item.url,
+              title: item.title,
+              author: item.author,
+              published_at: item.published_at,
+              content: item.content,
+              tags: item.tags,
+              raw_ref: JSON.stringify(item.metadata),
+              content_sha: item.url
+            })))
+          if (insertError) throw insertError
+        }
+
+        return {
+          success: true,
+          newItems: newItems.length,
+          items: newItems
+        }
       }
       
     } catch (error) {
-      console.error('HTML fetch error:', error)
+      console.error('GitHub README fetch error:', error)
       return {
         success: false,
         newItems: 0,

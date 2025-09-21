@@ -69,6 +69,22 @@ export class AIService {
   private static buildSystemPrompt(sourceName: string, aiFocus?: string): string {
     const basePrompt = `你是一个专业的新闻分析师，专门分析来自 "${sourceName}" 的内容。`
     
+    // 检查是否是 GitHub README 源
+    if (sourceName.includes('README') || sourceName.includes('github')) {
+      return `${basePrompt}
+
+**专门分析 GitHub README 更新：**
+你正在分析一个 GitHub 仓库的 README 文件内容。请重点关注：
+
+1. **最新更新内容**：识别 README 中标注的最新论文、更新日期
+2. **论文列表分析**：分析新增的论文标题、作者、发表期刊
+3. **技术趋势**：从论文标题和描述中识别技术发展方向
+4. **重要发现**：提取关键的技术突破和研究进展
+5. **更新解读**：总结最近有什么重要更新
+
+请用简洁明了的方式解读最新更新，重点关注变化和新增内容。`
+    }
+    
     const focusPrompt = aiFocus ? 
       `\n\n**分析重点和方向：**\n${aiFocus}\n\n请严格按照以上重点进行针对性分析，重点关注相关内容。` : 
       `\n\n请进行全面的内容分析。`
@@ -82,6 +98,34 @@ export class AIService {
     content: string
     url: string
   }>): string {
+    // 检查是否是 GitHub README 内容
+    const isGitHubReadme = items.some(item => 
+      item.title.includes('README') || 
+      item.content.includes('Papers last week') ||
+      item.content.includes('## ') ||
+      item.content.includes('### ')
+    )
+    
+    if (isGitHubReadme) {
+      const readmeContent = items[0]?.content || ''
+      
+      return `请分析以下 GitHub README 内容：
+
+**README 内容：**
+${readmeContent.substring(0, 2000)}...
+
+**请重点分析：**
+
+1. **最新更新** (100-150字): 识别并总结 README 中标注的最新论文和更新内容
+2. **新增论文** (3-5条): 列出最新添加的论文标题、作者、发表信息
+3. **技术趋势**: 从论文标题中分析当前的技术发展方向
+4. **重要突破**: 识别重要的技术突破和研究进展
+5. **更新解读**: 用简洁的语言总结最近有什么重要更新
+
+请重点关注变化和新增内容，用中文回答。`
+    }
+    
+    // 原有的通用分析逻辑
     const itemsText = items.map((item, index) => 
       `${index + 1}. ${item.title}\n   ${item.content?.substring(0, 200)}...\n   URL: ${item.url}\n`
     ).join('\n')
