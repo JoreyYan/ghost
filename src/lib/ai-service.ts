@@ -32,10 +32,11 @@ export class AIService {
     url: string
     published_at: string
     author: string
-  }>, sourceName: string): Promise<AnalysisResult> {
+  }>, sourceName: string, aiFocus?: string): Promise<AnalysisResult> {
     try {
-      // 构建分析提示词
-      const prompt = this.buildAnalysisPrompt(items, sourceName)
+      // 构建系统提示词和用户提示词
+      const systemPrompt = this.buildSystemPrompt(sourceName, aiFocus)
+      const userPrompt = this.buildUserPrompt(items)
       
       // 调用 OpenAI API
       const response = await fetch('/api/analyze', {
@@ -44,7 +45,8 @@ export class AIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt,
+          systemPrompt,
+          userPrompt,
           items: items.slice(0, 10) // 限制项目数量
         })
       })
@@ -63,17 +65,28 @@ export class AIService {
     }
   }
   
-  // 构建分析提示词
-  private static buildAnalysisPrompt(items: Array<{
+  // 构建系统提示词
+  private static buildSystemPrompt(sourceName: string, aiFocus?: string): string {
+    const basePrompt = `你是一个专业的新闻分析师，专门分析来自 "${sourceName}" 的内容。`
+    
+    const focusPrompt = aiFocus ? 
+      `\n\n**分析重点和方向：**\n${aiFocus}\n\n请严格按照以上重点进行针对性分析，重点关注相关内容。` : 
+      `\n\n请进行全面的内容分析。`
+    
+    return basePrompt + focusPrompt
+  }
+
+  // 构建用户提示词
+  private static buildUserPrompt(items: Array<{
     title: string
     content: string
     url: string
-  }>, sourceName: string): string {
+  }>): string {
     const itemsText = items.map((item, index) => 
       `${index + 1}. ${item.title}\n   ${item.content?.substring(0, 200)}...\n   URL: ${item.url}\n`
     ).join('\n')
     
-    return `你是一个专业的新闻分析师，请分析以下来自 "${sourceName}" 的最新内容：
+    return `请分析以下最新内容：
 
 ${itemsText}
 
@@ -117,12 +130,12 @@ ${itemsText}
       // 获取源信息
       const { data: source } = await supabase
         .from('sources')
-        .select('name')
+        .select('name, ai_focus')
         .eq('id', sourceId)
         .single()
       
       // 进行 AI 分析
-      const analysis = await this.analyzeContent(items, source?.name || 'Unknown Source')
+      const analysis = await this.analyzeContent(items, source?.name || 'Unknown Source', source?.ai_focus)
       
       // 构建 Markdown 格式的摘要
       const summaryMd = `# ${source?.name || 'Unknown Source'} - ${date} 摘要

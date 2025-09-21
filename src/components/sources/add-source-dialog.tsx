@@ -24,7 +24,8 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
     categories: [] as string[],
     schedule: "daily",
     time: "08:00",
-    description: ""
+    description: "",
+    aiFocus: "" // 新增：AI 分析重点
   })
 
   const [newCategory, setNewCategory] = useState("")
@@ -84,7 +85,9 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
         kind: typeMapping[formData.type] || 'json', // 默认使用 json
         handle: formData.url,
         active: true,
-        fetch_cron: formData.schedule ? `${formData.time} * * *` : null
+        fetch_cron: formData.schedule ? `${formData.time} * * *` : null,
+        description: formData.description,
+        ai_focus: formData.aiFocus // 新增 AI 分析重点
       }
 
       // 保存到 Supabase
@@ -191,6 +194,20 @@ export function AddSourceDialog({ onClose }: AddSourceDialogProps) {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="aiFocus">AI 分析重点</Label>
+              <Textarea
+                id="aiFocus"
+                placeholder="告诉 AI 这个数据源主要关注什么，应该重点分析什么内容..."
+                value={formData.aiFocus}
+                onChange={(e) => setFormData(prev => ({ ...prev, aiFocus: e.target.value }))}
+                rows={4}
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                例如：这是一个蛋白质设计论文集合，请重点关注新添加的论文、研究方法、技术突破、作者信息等
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -18,6 +18,8 @@ CREATE TABLE sources (
   handle TEXT NOT NULL, -- unique identifier: rss-url / user / owner/repo / custom URL
   active BOOLEAN DEFAULT TRUE,
   fetch_cron TEXT, -- e.g. "0 8 * * *"
+  description TEXT, -- 数据源描述
+  ai_focus TEXT, -- AI 分析重点，告诉 AI 应该关注什么
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (kind, handle)
 );

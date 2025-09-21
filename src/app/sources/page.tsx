@@ -123,10 +123,12 @@ export default function SourcesPage() {
                  `)
                  .order('created_at', { ascending: false })
 
-               if (error) {
-                 console.error('Error fetching sources:', error)
-                 setSources([])
-               } else {
+              if (error) {
+                console.error('Error fetching sources:', error)
+                console.error('Error details:', JSON.stringify(error, null, 2))
+                alert(`Error fetching sources: ${error.message || 'Unknown error'}`)
+                setSources([])
+              } else {
                  // Transform database data and get status for each source
                  const transformedSources = await Promise.all(
                    (data || []).map(async (source) => {

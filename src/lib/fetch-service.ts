@@ -166,29 +166,102 @@ export class FetchService {
   }
   
   // 从 RSS 源获取数据
-  static async fetchRSSFeed(_rssUrl: string): Promise<FetchResult> {
+  static async fetchRSSFeed(rssUrl: string, sourceId?: string): Promise<FetchResult> {
     try {
-      // 这里需要后端服务来解析 RSS，因为浏览器有 CORS 限制
-      // 暂时返回模拟数据
-      return {
-        success: true,
-        newItems: 3,
-        items: [
-          {
-            url: 'https://example.com/article1',
-            title: 'Latest Research Paper',
-            author: 'Dr. Smith',
-            published_at: new Date().toISOString(),
-            content: 'Abstract of the latest research...',
-            tags: ['research', 'ai'],
+      // 使用代理服务来避免 CORS 问题
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`
+      
+      const response = await fetch(proxyUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch RSS: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      let rssContent = data.contents
+      
+      // 检查是否是 base64 编码的内容
+      if (rssContent.startsWith('data:application/atom+xml; charset=utf-8;base64,')) {
+        const base64Data = rssContent.split(',')[1]
+        rssContent = Buffer.from(base64Data, 'base64').toString('utf-8')
+      }
+      
+      // 简单的 XML 解析
+      const items: Array<{
+        url: string
+        title: string
+        author: string
+        published_at: string
+        content: string
+        tags: string[]
+        metadata: Record<string, unknown>
+      }> = []
+      
+      // 解析 RSS/Atom feed
+      const entryMatches = rssContent.match(/<entry[^>]*>[\s\S]*?<\/entry>/g) || 
+                          rssContent.match(/<item[^>]*>[\s\S]*?<\/item>/g) || []
+      
+      for (const entry of entryMatches) {
+        const titleMatch = entry.match(/<title[^>]*>([^<]*)<\/title>/i)
+        const linkMatch = entry.match(/<link[^>]*href="([^"]*)"[^>]*>/i) || 
+                         entry.match(/<link[^>]*>([^<]*)<\/link>/i)
+        const authorMatch = entry.match(/<author[^>]*>[\s\S]*?<name[^>]*>([^<]*)<\/name>[\s\S]*?<\/author>/i) ||
+                           entry.match(/<dc:creator[^>]*>([^<]*)<\/dc:creator>/i)
+        const dateMatch = entry.match(/<updated[^>]*>([^<]*)<\/updated>/i) ||
+                         entry.match(/<pubDate[^>]*>([^<]*)<\/pubDate>/i)
+        const contentMatch = entry.match(/<content[^>]*>([^<]*)<\/content>/i) ||
+                            entry.match(/<description[^>]*>([^<]*)<\/description>/i)
+        
+        if (titleMatch && linkMatch) {
+          items.push({
+            url: linkMatch[1],
+            title: titleMatch[1].trim(),
+            author: authorMatch ? authorMatch[1].trim() : 'Unknown',
+            published_at: dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString(),
+            content: contentMatch ? contentMatch[1].trim() : titleMatch[1].trim(),
+            tags: ['commit', 'github'],
             metadata: {
               type: 'rss_item',
-              source: 'rss_feed'
+              source: 'github_commits_rss'
             }
-          }
-        ]
+          })
+        }
+      }
+      
+      // 保存到数据库
+      const { data: existingItems, error: fetchError } = await supabase
+        .from('items')
+        .select('url')
+        .in('url', items.map(item => item.url))
+
+      if (fetchError) throw fetchError
+
+      const existingUrls = new Set(existingItems?.map(item => item.url))
+      const newItems = items.filter(item => !existingUrls.has(item.url))
+
+      if (newItems.length > 0) {
+        const { error: insertError } = await supabase
+          .from('items')
+          .insert(newItems.map(item => ({
+            source_id: sourceId || 'unknown-source',
+            url: item.url,
+            title: item.title,
+            author: item.author,
+            published_at: item.published_at,
+            content: item.content,
+            tags: item.tags,
+            raw_ref: JSON.stringify(item.metadata),
+            content_sha: item.url
+          })))
+        if (insertError) throw insertError
+      }
+
+      return {
+        success: true,
+        newItems: newItems.length,
+        items: newItems
       }
     } catch (error) {
+      console.error('RSS fetch error:', error)
       return {
         success: false,
         newItems: 0,
@@ -230,7 +303,7 @@ export class FetchService {
           fetchResult = await this.fetchGitHubRepo(source.handle)
           break
         case 'rss':
-          fetchResult = await this.fetchRSSFeed(source.handle)
+          fetchResult = await this.fetchRSSFeed(source.handle, sourceId)
           break
         default:
           throw new Error(`Unsupported source type: ${source.kind}`)

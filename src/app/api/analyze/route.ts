@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json()
+    const { systemPrompt, userPrompt, prompt } = await request.json()
     
     // 检查是否有 OpenAI API Key
     const openaiApiKey = process.env.OPENAI_API_KEY
@@ -19,6 +19,19 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // 构建消息数组
+    const messages = []
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt })
+    } else {
+      // 默认系统提示词
+      messages.push({ 
+        role: 'system', 
+        content: '你是一个专业的新闻分析师，擅长分析技术内容并提供深度洞察。请用中文回答，保持专业和客观。' 
+      })
+    }
+    messages.push({ role: 'user', content: userPrompt || prompt })
+    
     // 调用 OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -28,16 +41,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个专业的新闻分析师，擅长分析技术内容并提供深度洞察。请用中文回答，保持专业和客观。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
+        messages,
         max_tokens: 1000,
         temperature: 0.7
       })
