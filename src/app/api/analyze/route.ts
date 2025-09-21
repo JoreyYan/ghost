@@ -4,25 +4,33 @@ export async function POST(request: NextRequest) {
   try {
     const { systemPrompt, userPrompt, prompt } = await request.json()
     
-    // 检查是否有 OpenAI API Key
+    // 检查是否有 Claude API Key
+    const claudeApiKey = process.env.CLAUDE_API_KEY
     const openaiApiKey = process.env.OPENAI_API_KEY
     
     console.log('Environment check:', {
       nodeEnv: process.env.NODE_ENV,
+      hasClaudeKey: !!claudeApiKey,
       hasOpenAIKey: !!openaiApiKey,
-      keyPrefix: openaiApiKey ? openaiApiKey.substring(0, 20) + '...' : 'NOT SET'
+      claudeKeyPrefix: claudeApiKey ? claudeApiKey.substring(0, 20) + '...' : 'NOT SET',
+      openaiKeyPrefix: openaiApiKey ? openaiApiKey.substring(0, 20) + '...' : 'NOT SET'
     })
     
-    if (!openaiApiKey) {
+    // 优先使用 Claude API，如果没有则使用 OpenAI
+    const useClaude = !!claudeApiKey
+    const apiKey = useClaude ? claudeApiKey : openaiApiKey
+    
+    if (!apiKey) {
       // 如果没有 API Key，返回错误信息
       return NextResponse.json(
         { 
-          error: 'OpenAI API Key not configured',
-          message: '请在 Vercel 环境变量中配置 OPENAI_API_KEY',
-          details: '获取 API Key: https://platform.openai.com/api-keys',
+          error: 'API Key not configured',
+          message: '请在 Vercel 环境变量中配置 CLAUDE_API_KEY 或 OPENAI_API_KEY',
+          details: useClaude ? '获取 Claude API Key: https://console.anthropic.com/' : '获取 OpenAI API Key: https://platform.openai.com/api-keys',
           debug: {
             nodeEnv: process.env.NODE_ENV,
-            allEnvKeys: Object.keys(process.env).filter(key => key.includes('OPENAI'))
+            preferredProvider: useClaude ? 'Claude' : 'OpenAI',
+            allEnvKeys: Object.keys(process.env).filter(key => key.includes('CLAUDE') || key.includes('OPENAI'))
           }
         },
         { status: 400 }
@@ -42,26 +50,48 @@ export async function POST(request: NextRequest) {
     }
     messages.push({ role: 'user', content: userPrompt || prompt })
     
-    // 调用 OpenAI API（带重试机制）
+    // 调用 AI API（Claude 或 OpenAI，带重试机制）
     let response: Response | undefined
     let retryCount = 0
     const maxRetries = 2
     
     while (retryCount <= maxRetries) {
       try {
-        response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages,
-            max_tokens: 1000,
-            temperature: 0.7
+        if (useClaude) {
+          // 调用 Claude API
+          response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json',
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-sonnet-20240229',
+              max_tokens: 1000,
+              temperature: 0.7,
+              messages: messages.map(msg => ({
+                role: msg.role === 'system' ? 'user' : msg.role,
+                content: msg.role === 'system' ? `[系统指令] ${msg.content}` : msg.content
+              }))
+            })
           })
-        })
+        } else {
+          // 调用 OpenAI API
+          response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-3.5-turbo',
+              messages,
+              max_tokens: 1000,
+              temperature: 0.7
+            })
+          })
+        }
         
         // 如果是 429 错误且还有重试次数，等待后重试
         if (response.status === 429 && retryCount < maxRetries) {
@@ -87,23 +117,32 @@ export async function POST(request: NextRequest) {
     
     if (!response || !response.ok) {
       const errorData = response ? await response.text() : 'No response received'
-      console.error('OpenAI API error:', {
+      console.error(`${useClaude ? 'Claude' : 'OpenAI'} API error:`, {
         status: response?.status,
         statusText: response?.statusText,
         errorData,
-        retryCount
+        retryCount,
+        provider: useClaude ? 'Claude' : 'OpenAI'
       })
       
       // 为 429 错误提供更友好的信息
       if (response?.status === 429) {
-        throw new Error(`OpenAI API 调用频率超限 (429) - 请稍后重试。这通常是因为短时间内发送了太多请求。`)
+        throw new Error(`${useClaude ? 'Claude' : 'OpenAI'} API 调用频率超限 (429) - 请稍后重试。这通常是因为短时间内发送了太多请求。`)
       }
       
-      throw new Error(`OpenAI API error: ${response?.status || 'Unknown'} - ${response?.statusText || 'No response'}`)
+      throw new Error(`${useClaude ? 'Claude' : 'OpenAI'} API error: ${response?.status || 'Unknown'} - ${response?.statusText || 'No response'}`)
     }
     
     const data = await response.json()
-    const analysisText = data.choices[0].message.content
+    let analysisText: string
+    
+    if (useClaude) {
+      // Claude API 响应格式
+      analysisText = data.content[0].text
+    } else {
+      // OpenAI API 响应格式
+      analysisText = data.choices[0].message.content
+    }
     
     // 解析 AI 返回的分析结果
     const parsedAnalysis = parseAnalysisResponse(analysisText)

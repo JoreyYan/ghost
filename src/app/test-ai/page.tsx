@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -19,9 +19,26 @@ export default function TestAIPage() {
     keyEntities: string[]
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [aiProvider, setAiProvider] = useState<string>('Unknown')
   const [testContent, setTestContent] = useState(`1. New protein folding model achieves 95% accuracy
 2. Machine learning breakthrough in drug discovery
 3. Open source AI framework released with 10k+ stars`)
+
+  // 获取 AI 提供商信息
+  const getAIProvider = async () => {
+    try {
+      const response = await fetch('/api/debug-env')
+      const data = await response.json()
+      setAiProvider(data.preferredProvider || 'Unknown')
+    } catch (err) {
+      console.error('Failed to get AI provider:', err)
+    }
+  }
+
+  // 组件加载时获取 AI 提供商
+  React.useEffect(() => {
+    getAIProvider()
+  }, [])
 
   const testAI = async () => {
     setLoading(true)
@@ -93,9 +110,12 @@ ${testContent}
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
             AI 分析功能测试
+            <Badge variant="outline" className="ml-2">
+              {aiProvider}
+            </Badge>
           </CardTitle>
           <CardDescription>
-            测试 OpenAI API 集成和内容分析功能
+            测试 {aiProvider} API 集成和内容分析功能
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -258,10 +278,15 @@ ${testContent}
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
             <h4 className="font-medium text-blue-800">配置说明</h4>
             <div className="mt-2 text-sm text-blue-700 space-y-1">
-              <p>1. 在 Vercel 项目设置中添加环境变量: <code className="bg-blue-100 px-1 rounded">OPENAI_API_KEY</code></p>
-              <p>2. 获取 OpenAI API Key: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">https://platform.openai.com/api-keys</a></p>
-              <p>3. 重新部署项目使环境变量生效</p>
-              <p>4. 测试 AI 分析功能</p>
+              <p>1. 在 Vercel 项目设置中添加环境变量: <code className="bg-blue-100 px-1 rounded">CLAUDE_API_KEY</code> 或 <code className="bg-blue-100 px-1 rounded">OPENAI_API_KEY</code></p>
+              <p>2. 获取 API Key:</p>
+              <ul className="ml-4 space-y-1">
+                <li>• Claude API Key: <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="underline">https://console.anthropic.com/</a></li>
+                <li>• OpenAI API Key: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">https://platform.openai.com/api-keys</a></li>
+              </ul>
+              <p>3. 系统会优先使用 Claude API，如果没有配置则使用 OpenAI API</p>
+              <p>4. 重新部署项目使环境变量生效</p>
+              <p>5. 测试 AI 分析功能</p>
             </div>
           </div>
         </CardContent>
