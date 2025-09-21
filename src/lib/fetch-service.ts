@@ -328,7 +328,56 @@ export class FetchService {
         const readmeContent = Buffer.from(data.content, 'base64').toString('utf-8')
         console.log('README content length:', readmeContent.length)
         
-        // 创建单个条目，包含完整 README 内容
+        // 立即进行 AI 分析，生成更新总结
+        let aiSummary = ''
+        try {
+          console.log('Generating AI summary for README...')
+          const { AIService } = await import('./ai-service')
+          
+          const analysisResult = await AIService.analyzeContent([{
+            title: `${owner}/${repo} - README 更新`,
+            content: readmeContent,
+            url: htmlUrl,
+            published_at: new Date().toISOString(),
+            author: owner
+          }], `${owner}/${repo}`, '这是一个蛋白质设计论文集合的 GitHub README，请重点关注最新添加的论文、研究方法、技术突破、作者信息等')
+          
+          // 生成简洁的更新总结
+          aiSummary = `📚 **${owner}/${repo} 最新更新**\n\n`
+          
+          if (analysisResult.summary) {
+            aiSummary += `**更新概览：**\n${analysisResult.summary}\n\n`
+          }
+          
+          if (analysisResult.insights && analysisResult.insights.length > 0) {
+            aiSummary += `**重要发现：**\n`
+            analysisResult.insights.slice(0, 3).forEach((insight: string, index: number) => {
+              aiSummary += `${index + 1}. ${insight}\n`
+            })
+            aiSummary += '\n'
+          }
+          
+          if (analysisResult.keyEntities && analysisResult.keyEntities.length > 0) {
+            aiSummary += `**关键论文：**\n`
+            analysisResult.keyEntities.slice(0, 5).forEach((entity: string) => {
+              aiSummary += `• ${entity}\n`
+            })
+          }
+          
+          console.log('AI summary generated successfully')
+        } catch (error) {
+          console.error('AI analysis failed, using fallback:', error)
+          // 如果 AI 分析失败，使用简单的文本提取
+          const lines = readmeContent.split('\n')
+          const latestPapersLine = lines.find(line => line.includes('Papers last week'))
+          if (latestPapersLine) {
+            aiSummary = `📚 **${owner}/${repo} 最新更新**\n\n${latestPapersLine}\n\n检测到最新论文更新，请查看完整摘要获取详细信息。`
+          } else {
+            aiSummary = `📚 **${owner}/${repo} README 更新**\n\n检测到 README 内容更新，包含蛋白质设计相关的最新论文和研究进展。`
+          }
+        }
+        
+        // 创建单个条目，包含 AI 分析后的内容
         const items: Array<{
           url: string
           title: string
@@ -341,19 +390,20 @@ export class FetchService {
         
         items.push({
           url: htmlUrl,
-          title: `${owner}/${repo} - README 更新`,
+          title: `${owner}/${repo} - 最新更新`,
           author: owner,
           published_at: new Date().toISOString(),
-          content: readmeContent,
-          tags: ['github', 'readme', 'protein-design', 'deep-learning'],
+          content: aiSummary,
+          tags: ['github', 'readme', 'protein-design', 'deep-learning', 'ai-summary'],
           metadata: {
-            type: 'github_readme',
+            type: 'github_readme_ai_summary',
             source: 'github_api',
             owner: owner,
             repo: repo,
             sha: data.sha,
             size: data.size,
-            originalUrl: htmlUrl
+            originalUrl: htmlUrl,
+            originalContent: readmeContent.substring(0, 500) // 保存部分原始内容用于调试
           }
         })
         
