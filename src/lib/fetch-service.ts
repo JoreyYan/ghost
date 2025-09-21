@@ -212,16 +212,38 @@ export class FetchService {
                             entry.match(/<description[^>]*>([^<]*)<\/description>/i)
         
         if (titleMatch && linkMatch) {
+          // 解码 HTML 实体
+          const decodeHtml = (html: string) => {
+            return html
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&')
+              .replace(/&#39;/g, "'")
+              .replace(/&quot;/g, '"')
+              .replace(/<[^>]*>/g, '') // 移除 HTML 标签
+              .trim()
+          }
+          
+          const title = decodeHtml(titleMatch[1])
+          const content = contentMatch ? decodeHtml(contentMatch[1]) : title
+          
+          // 对于 GitHub commits，尝试获取更详细的信息
+          let enhancedContent = content
+          if (content === 'weekly updates' || content === title) {
+            enhancedContent = `GitHub commit: ${title}\n\nThis appears to be a regular update commit. The actual changes may contain new papers or research updates.`
+          }
+          
           items.push({
             url: linkMatch[1],
-            title: titleMatch[1].trim(),
+            title: title,
             author: authorMatch ? authorMatch[1].trim() : 'Unknown',
             published_at: dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString(),
-            content: contentMatch ? contentMatch[1].trim() : titleMatch[1].trim(),
+            content: enhancedContent,
             tags: ['commit', 'github'],
             metadata: {
               type: 'rss_item',
-              source: 'github_commits_rss'
+              source: 'github_commits_rss',
+              originalContent: contentMatch ? contentMatch[1] : null
             }
           })
         }
