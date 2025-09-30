@@ -28,7 +28,12 @@ export interface GitHubRepoData {
 
 export class FetchService {
   // 从 GitHub 仓库获取 README 内容（简化版本）
-  static async fetchGitHubRepo(repoUrl: string): Promise<FetchResult> {
+  static async fetchGitHubRepo(repoUrl: string, sourceConfig?: {
+    extract_section?: string;
+    dedup_strategy?: string;
+    ai_focus?: string;
+    id?: string;
+  }): Promise<FetchResult> {
     try {
       // 解析 GitHub URL
       const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
@@ -59,6 +64,70 @@ export class FetchService {
       const readmeContent = Buffer.from(data.content, 'base64').toString('utf-8')
       console.log('README content length:', readmeContent.length)
       
+      // 如果配置了提取特定章节，只提取该章节内容
+      let contentToAnalyze = readmeContent
+      let sectionContent = ''
+      
+      if (sourceConfig?.extract_section) {
+        console.log('Extracting section:', sourceConfig.extract_section)
+        const lines = readmeContent.split('\n')
+        let inSection = false
+        const sectionLines: string[] = []
+        
+        for (const line of lines) {
+          if (line.includes(sourceConfig.extract_section)) {
+            inSection = true
+            sectionLines.push(line)
+            continue
+          }
+          
+          if (inSection) {
+            // 如果遇到另一个主要章节标记，停止提取
+            if (line.match(/^#{1,2}\s/) && !line.includes(sourceConfig.extract_section)) {
+              break
+            }
+            sectionLines.push(line)
+          }
+        }
+        
+        sectionContent = sectionLines.join('\n').trim()
+        console.log('Extracted section content length:', sectionContent.length)
+        
+        if (sectionContent) {
+          contentToAnalyze = sectionContent
+          
+          // 检查去重策略
+          if (sourceConfig?.dedup_strategy === 'section_hash' && sourceConfig?.id) {
+            // 计算章节内容哈希
+            const crypto = require('crypto')
+            const contentHash = crypto.createHash('md5').update(sectionContent).digest('hex')
+            console.log('Section content hash:', contentHash)
+            
+            // 检查是否已经抓取过相同内容
+            const { data: existingItems } = await supabase
+              .from('items')
+              .select('metadata')
+              .eq('source_id', sourceConfig.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+            
+            if (existingItems && existingItems.length > 0) {
+              const lastHash = existingItems[0]?.metadata?.section_hash
+              if (lastHash === contentHash) {
+                console.log('Section content unchanged, skipping...')
+                return {
+                  success: true,
+                  newItems: 0,
+                  items: []
+                }
+              }
+            }
+          }
+        } else {
+          console.log('Section not found, will analyze full content')
+        }
+      }
+      
       // 立即进行 AI 分析，生成 50 字简洁总结
       let aiSummary = ''
       try {
@@ -67,11 +136,11 @@ export class FetchService {
         
         const analysisResult = await AIService.analyzeContent([{
           title: `${owner}/${repo} - README 更新`,
-          content: readmeContent,
+          content: contentToAnalyze,
           url: repoUrl,
           published_at: new Date().toISOString(),
           author: owner
-        }], `${owner}/${repo}`, '这是一个蛋白质设计论文集合的 GitHub README，请重点关注最新添加的论文、研究方法、技术突破、作者信息等')
+        }], `${owner}/${repo}`, sourceConfig?.ai_focus || '这是一个蛋白质设计论文集合的 GitHub README，请重点关注最新添加的论文、研究方法、技术突破、作者信息等')
         
         // 生成 50 字简洁总结
         if (analysisResult.summary) {
@@ -113,6 +182,10 @@ export class FetchService {
         metadata: Record<string, unknown>
       }> = []
       
+      // 计算内容哈希用于去重
+      const crypto = require('crypto')
+      const contentHash = crypto.createHash('md5').update(sectionContent || contentToAnalyze).digest('hex')
+      
       items.push({
         url: repoUrl,
         title: `${owner}/${repo} - 最新更新`,
@@ -127,7 +200,9 @@ export class FetchService {
           repo: repo,
           sha: data.sha,
           size: data.size,
-          originalUrl: repoUrl
+          originalUrl: repoUrl,
+          section_hash: contentHash,
+          extracted_section: sourceConfig?.extract_section || null
         }
       })
 
@@ -533,7 +608,12 @@ export class FetchService {
       // 根据源类型选择抓取方法
       switch (source.kind) {
         case 'github_repo':
-          fetchResult = await this.fetchGitHubRepo(source.handle)
+          fetchResult = await this.fetchGitHubRepo(source.handle, {
+            extract_section: source.extract_section,
+            dedup_strategy: source.dedup_strategy,
+            ai_focus: source.ai_focus,
+            id: sourceId
+          })
           break
         case 'rss':
           fetchResult = await this.fetchRSSFeed(source.handle, sourceId)

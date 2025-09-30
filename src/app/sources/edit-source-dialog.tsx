@@ -32,7 +32,9 @@ export function EditSourceDialog({
     kind: sourceKind,
     handle: sourceHandle,
     description: "",
-    aiFocus: ""
+    aiFocus: "",
+    extractSection: "", // 例如：Papers last week
+    dedupStrategy: "content_hash" // content_hash, section_hash, none
   })
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
@@ -55,7 +57,9 @@ export function EditSourceDialog({
           setFormData(prev => ({
             ...prev,
             description: data.description || "",
-            aiFocus: data.ai_focus || ""
+            aiFocus: data.ai_focus || "",
+            extractSection: data.extract_section || "",
+            dedupStrategy: data.dedup_strategy || "content_hash"
           }))
         }
       } catch (err) {
@@ -79,6 +83,8 @@ export function EditSourceDialog({
         handle: string;
         description?: string;
         ai_focus?: string;
+        extract_section?: string;
+        dedup_strategy?: string;
       } = {
         name: formData.name,
         kind: formData.kind,
@@ -98,6 +104,8 @@ export function EditSourceDialog({
           // 列存在，可以安全更新
           updateData.description = formData.description
           updateData.ai_focus = formData.aiFocus
+          updateData.extract_section = formData.extractSection
+          updateData.dedup_strategy = formData.dedupStrategy
         }
       } catch (err) {
         console.log('New columns not available, updating basic fields only')
@@ -210,6 +218,47 @@ export function EditSourceDialog({
               />
               <div className="text-sm text-muted-foreground mt-1">
                 例如：这是一个蛋白质设计论文集合，请重点关注新添加的论文、研究方法、技术突破、作者信息等
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 高级配置 - 内容提取 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">内容提取配置 (高级)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="extractSection">只关注特定章节</Label>
+              <Input
+                id="extractSection"
+                placeholder="例如：Papers last week, Latest Updates, 最新论文"
+                value={formData.extractSection}
+                onChange={(e) => setFormData(prev => ({ ...prev, extractSection: e.target.value }))}
+              />
+              <div className="text-sm text-muted-foreground mt-1">
+                如果填写，系统将只提取包含此标记的章节内容。如果该章节没有变化，则不会创建新条目。
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="dedupStrategy">去重策略</Label>
+              <Select 
+                value={formData.dedupStrategy} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, dedupStrategy: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择去重策略" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="content_hash">内容哈希（推荐）- 内容完全相同时跳过</SelectItem>
+                  <SelectItem value="section_hash">章节哈希 - 指定章节内容相同时跳过</SelectItem>
+                  <SelectItem value="none">不去重 - 每次都创建新条目</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-sm text-muted-foreground mt-1">
+                控制如何判断内容是否已经抓取过
               </div>
             </div>
           </CardContent>
